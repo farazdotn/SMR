@@ -8,10 +8,15 @@
 </head> 
 <body> 
     <header> 
-        <h1>{{output.usage_metadata}}</h1> 
+        <h1>output</h1> 
     </header> 
     <main> 
-        <p>{{output.text}}</p> 
+{% for t in candidates %}
+  <img src="{{ t.artwork_url }}" width="150">
+  <p>{{ t.title }}, {{ t.artist }} ({{ t.album }})</p>
+{% endfor %}
+<p>fake: {{ fake }}</p>
+<p>real: {{ real.title }}, {{ real.artist }}</p>
     </main>  
 </body> 
 </html> 
