@@ -3,7 +3,6 @@
     {% if chosen.artwork_url %}<img src="{{ chosen.artwork_url }}" alt="">{% endif %}
     <div>
       <p>Showing results for <strong>{{ chosen.title }}</strong> by {{ chosen.artist }}</p>
-      {% if chosen.preview_url %}<audio controls preload="none" src="{{ chosen.preview_url }}"></audio>{% endif %}
     </div>
   </div>
   {% if alternatives %}
@@ -29,7 +28,7 @@
   <p class="error">{{ error }}</p>
 {% elif search %}
   {% for r in recommendations %}
-    <article class="card">
+    <article class="card" style="--i: {{ forloop.counter0 }}">
       {% if r.artwork_url %}<img src="{{ r.artwork_url }}" alt="">{% endif %}
       <div>
         <h3>{{ r.title }}</h3>

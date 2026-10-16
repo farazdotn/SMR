@@ -14,7 +14,7 @@
     input[type=text] { flex: 1; padding: .7rem; border-radius: 8px; border: 1px solid #333; background: #1c1c1c; color: inherit; font-size: 1rem; }
     button { padding: .7rem 1.2rem; border: 0; border-radius: 8px; background: #e8b84a; color: #111; font-weight: 600; cursor: pointer; }
     .htmx-indicator { display: none; color: #e8b84a; margin-bottom: 1rem; }
-    .htmx-request.htmx-indicator { display: flex; align-items: center; gap: .6rem; }
+    .htmx-request.htmx-indicator { display: flex; align-items: center; gap: .6rem; animation: fade-in .3s ease both; }
     .spinner { width: 20px; height: 20px; border: 3px solid #333; border-top-color: #e8b84a; border-radius: 50%; animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .empty { color: #999; }
@@ -34,6 +34,13 @@
     .wrong a:hover { background: #1c1c1c; }
     .wrong img { width: 40px; height: 40px; border-radius: 4px; }
     audio { width: 100%; max-width: 320px; height: 32px; margin: 0 0 .6rem; }
+    @keyframes fade-in { from { opacity: 0; } }
+    @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
+    .searched, .error { animation: fade-in .4s ease both; }
+    .card { animation: rise .5s ease both; animation-delay: calc(var(--i, 0) * 120ms); }
+    @media (prefers-reduced-motion: reduce) {
+      .card, .searched, .error, .htmx-request.htmx-indicator { animation: none; }
+    }
   </style>
 </head>
 <body>
