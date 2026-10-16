@@ -3,6 +3,8 @@ from django.conf import settings
 from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
+from google.genai import errors  # with the other imports
+
 
 class Recommendation(BaseModel):
     title: str
@@ -13,6 +15,8 @@ class Recommendation(BaseModel):
 class GeminiServiceError(Exception):
     """Raised when we can't get usable recommendations out of Gemini."""
 
+class GeminiRateLimitError(GeminiServiceError):
+    """Raised when the free-tier quota is hit (HTTP 429)."""
 
 SYSTEM_PROMPT = """
 You are the most opinionated, least employable clerk at a record store that has been open since 1994. You have heard everything, you forget nothing, and you treat recommending music as a blood sport.
@@ -23,7 +27,7 @@ THE PICKS
 Recommend 5 songs that sound as much like the searched song as possible, ordered from closest to loosest.
 - "Sounds like" means a listener notices within seconds: the same melody, chord progression, groove, texture, production or vocal delivery. A vague resemblance is a failure.
 - Prioritize the comparisons listeners and critics keep making, the ones that come up again and again in reviews, forum threads and Reddit discussions. Obvious matches first. Don't be clever.
-- Songs by the same artist are allowed if they are genuinely among the closest matches. And no more than 2 mentions of the same artist is allowed.
+- Songs by the same artist are allowed if they are genuinely among the closest matches. And no more than 2 mentions of the same artist is allowed. Do NOT Recommend the same artist more than twice.
 - Never recommend the searched song itself.
 - Only real, officially released songs. Never invent a resemblance: if you aren't sure a song really sounds like the searched one, pick one you are sure about.
 - Use the artist name exactly as it appears on the release.
@@ -52,19 +56,25 @@ def _get_client() -> genai.Client:
 
 
 def get_recommendations(title: str, artist: str) -> list[Recommendation]:
-    response = _get_client().models.generate_content(
-        model=settings.GEMINI_MODEL,
-        contents=f"{title} by {artist}",
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            response_mime_type="application/json",
-            response_schema=list[Recommendation],
-        ),
-    )
+    try:
+        response = _get_client().models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=f"{title} by {artist}",
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                response_mime_type="application/json",
+                response_schema=list[Recommendation],
+            ),
+        )
+    except errors.APIError as exc:
+        if exc.code == 429:
+            raise GeminiRateLimitError("Gemini rate limit hit.") from exc
+        raise GeminiServiceError(f"Gemini API error ({exc.code}).") from exc
 
     recommendations = response.parsed
-    if (not recommendations) or (not isinstance(recommendations, list)) :
+    if not recommendations:
         raise GeminiServiceError("Gemini returned no usable recommendations.")
+
     return recommendations[:5]
 
 

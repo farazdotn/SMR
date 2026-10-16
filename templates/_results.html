@@ -1,0 +1,25 @@
+{% if error %}
+  <p class="error">{{ error }}</p>
+{% elif search %}
+  <div class="searched">
+    {% if search.artwork_url %}<img src="{{ search.artwork_url }}" alt="">{% endif %}
+    <p>Showing results for <strong>{{ search.title }}</strong> by {{ search.artist }}</p>
+  </div>
+  {% for r in recommendations %}
+    <article class="card">
+      {% if r.artwork_url %}<img src="{{ r.artwork_url }}" alt="">{% endif %}
+      <div>
+        <h3>{{ r.title }}</h3>
+        <p class="artist">{{ r.artist }}</p>
+        <p class="rationale">{{ r.rationale }}</p>
+        <p class="links">
+          {% if r.link %}<a href="{{ r.link }}" target="_blank" rel="noopener noreferrer">Apple Music</a>{% endif %}
+          <a href="https://open.spotify.com/search/{{ r.search_term|urlencode:'' }}" target="_blank" rel="noopener noreferrer">Spotify</a>
+          <a href="https://www.youtube.com/results?search_query={{ r.search_term|urlencode:'' }}" target="_blank" rel="noopener noreferrer">YouTube</a>
+        </p>
+      </div>
+    </article>
+  {% endfor %}
+{% else %}
+  <p class="empty">Nothing here yet. Type a song and prepare to be corrected.</p>
+{% endif %}

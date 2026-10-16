@@ -17,9 +17,10 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
-from recommender.views import test
+from recommender.views import index, search
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", test, name="test")
+    path("", index, name="index"),
+    path("search/", search, name="search"),
 ]

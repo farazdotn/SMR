@@ -1,22 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crate Digger</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee; max-width: 640px; margin: 0 auto; padding: 2rem 1rem; }
+    h1 { margin-bottom: .25rem; }
+    .tagline { color: #999; margin-top: 0; }
+    form { display: flex; gap: .5rem; margin: 1.5rem 0; }
+    input[type=text] { flex: 1; padding: .7rem; border-radius: 8px; border: 1px solid #333; background: #1c1c1c; color: inherit; font-size: 1rem; }
+    button { padding: .7rem 1.2rem; border: 0; border-radius: 8px; background: #e8b84a; color: #111; font-weight: 600; cursor: pointer; }
+    .htmx-indicator { display: none; color: #e8b84a; margin-bottom: 1rem; }
+    .htmx-request.htmx-indicator { display: block; }
+    .empty { color: #999; }
+    .error { color: #ff8a80; }
+    .searched { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
+    .searched img { width: 64px; border-radius: 6px; }
+    .card { display: flex; gap: 1rem; padding: 1rem; margin-bottom: .75rem; background: #1c1c1c; border-radius: 12px; }
+    .card img { width: 96px; height: 96px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+    .card h3 { margin: 0; }
+    .artist { margin: 0 0 .5rem; color: #999; }
+    .rationale { font-style: italic; margin: 0 0 .6rem; }
+    .links a { color: #e8b84a; margin-right: .8rem; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <h1>Crate Digger</h1>
+  <p class="tagline">Tell us a song. We'll tell you what you should've been listening to.</p>
 
-<!DOCTYPE html> 
-<html lang="en"> 
-<head> 
-    <meta charset="UTF-8"> 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>My Website</title> 
-</head> 
-<body> 
-    <header> 
-        <h1>output</h1> 
-    </header> 
-    <main> 
-{% for t in candidates %}
-  <img src="{{ t.artwork_url }}" width="150">
-  <p>{{ t.title }}, {{ t.artist }} ({{ t.album }})</p>
-{% endfor %}
-<p>fake: {{ fake }}</p>
-<p>real: {{ real.title }}, {{ real.artist }}</p>
-    </main>  
-</body> 
-</html> 
+  <form hx-get="{% url 'search' %}" hx-target="#results" hx-indicator="#spinner" hx-push-url="true">
+    <input type="text" name="q" value="{{ q }}" placeholder="Song and artist, e.g. Reckoner Radiohead" required autofocus>
+    <button type="submit">Judge me</button>
+  </form>
+
+  <div id="spinner" class="htmx-indicator">Consulting the crate-diggers…</div>
+
+  <main id="results">
+    {% include "_results.html" %}
+  </main>
+</body>
+</html>

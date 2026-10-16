@@ -91,3 +91,6 @@ def verify_recommendation(title: str, artist: str) -> CatalogTrack | None:
         if score > best_score:
             best, best_score = track, score
     return best
+
+def song_key(title: str, artist: str) -> str:
+    return f"{_normalize(title)}|{_normalize(artist)}"
