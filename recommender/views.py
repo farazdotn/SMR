@@ -2,7 +2,7 @@ import logging
 from django.db import transaction
 from django.db.models import F
 from django.shortcuts import render
-
+from concurrent.futures import ThreadPoolExecutor
 from .catalog import CatalogError, search_candidates, song_key, verify_recommendation
 from .gemini_service import (
     GeminiRateLimitError,
@@ -20,6 +20,7 @@ def index(request):
 
 def search(request):
     q = request.GET.get("q", "").strip()[:200]
+    pick = request.GET.get("pick", "")
     template = "_results.html" if request.headers.get("HX-Request") else "index.html"
     context = {"q": q}
 
@@ -28,11 +29,17 @@ def search(request):
         return render(request, template, context)
 
     try:
-        candidates = search_candidates(q, limit=1)
+        candidates = search_candidates(q, limit=10)
         if not candidates:
             context["error"] = f"Couldn't find '{q}'. Check the spelling, or add the artist's name."
         else:
-            search_obj = _get_results(candidates[0])
+            chosen = candidates[0]
+            if pick.isdigit():
+                chosen = next((c for c in candidates if c.catalog_id == int(pick)), chosen)
+            context["chosen"] = chosen
+            context["alternatives"] = _alternatives(candidates, chosen)
+
+            search_obj = _get_results(chosen)
             if search_obj is None:
                 context["error"] = "I couldn't verify any recommendations for that one. Try another song."
             else:
@@ -50,6 +57,25 @@ def search(request):
     return render(request, template, context)
 
 
+def _alternatives(candidates, chosen, max_items=5):
+    """Other songs the user might have meant, minus re-releases of the chosen one."""
+    seen = {song_key(chosen.title, chosen.artist)}
+    alts = []
+    for c in candidates:
+        key = song_key(c.title, c.artist)
+        if key in seen:
+            continue
+        seen.add(key)
+        alts.append(c)
+    return alts[:max_items]
+
+
+def _verify_all(recs):
+    """Look up every recommendation in iTunes at once. Results keep Gemini's order."""
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        return list(pool.map(lambda r: verify_recommendation(r.title, r.artist), recs))
+
+
 def _get_results(track):
     """Cache-first: return a SearchQuery with recommendations, or None."""
     cached = SearchQuery.objects.filter(catalog_id=track.catalog_id).first()
@@ -58,11 +84,11 @@ def _get_results(track):
         return cached
 
     recs = get_recommendations(track.title, track.artist)
+    matches = _verify_all(recs)
 
     seen = {song_key(track.title, track.artist)}  # never recommend the searched song
     verified = []
-    for rec in recs:
-        match = verify_recommendation(rec.title, rec.artist)
+    for rec, match in zip(recs, matches):
         if match is None:
             continue
         key = song_key(match.title, match.artist)
@@ -94,6 +120,7 @@ def _get_results(track):
                     rationale=rec.rationale,
                     artwork_url=match.artwork_url,
                     link=match.link,
+                    preview_url=match.preview_url,
                 )
                 for rec, match in verified
             )

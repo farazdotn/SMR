@@ -1,10 +1,30 @@
+{% if chosen %}
+    <div>
+      <p>Showing results for <strong>{{ chosen.title }}</strong> by {{ chosen.artist }}</p>
+      {% if chosen.preview_url %}<audio controls preload="none" src="{{ chosen.preview_url }}"></audio>{% endif %}
+    </div>
+  {% if alternatives %}
+    <details class="wrong">
+      <summary>Wrong song?</summary>
+      <ul>
+        {% for alt in alternatives %}
+          <li>
+            <a href="{% url 'search' %}?q={{ q|urlencode:'' }}&amp;pick={{ alt.catalog_id }}"
+               hx-get="{% url 'search' %}?q={{ q|urlencode:'' }}&amp;pick={{ alt.catalog_id }}"
+               hx-target="#results" hx-indicator="#spinner" hx-push-url="true">
+              {% if alt.artwork_url %}<img src="{{ alt.artwork_url }}" alt="">{% endif %}
+              <span><strong>{{ alt.title }}</strong> by {{ alt.artist }}<br><small>{{ alt.album }}</small></span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+  {% endif %}
+{% endif %}
+
 {% if error %}
   <p class="error">{{ error }}</p>
 {% elif search %}
-  <div class="searched">
-    {% if search.artwork_url %}<img src="{{ search.artwork_url }}" alt="">{% endif %}
-    <p>Showing results for <strong>{{ search.title }}</strong> by {{ search.artist }}</p>
-  </div>
   {% for r in recommendations %}
     <article class="card">
       {% if r.artwork_url %}<img src="{{ r.artwork_url }}" alt="">{% endif %}
@@ -12,6 +32,8 @@
         <h3>{{ r.title }}</h3>
         <p class="artist">{{ r.artist }}</p>
         <p class="rationale">{{ r.rationale }}</p>
+                {% if r.preview_url %}<audio controls preload="none" src="{{ r.preview_url }}"></audio>
+                {% endif %}
         <p class="links">
           {% if r.link %}<a href="{{ r.link }}" target="_blank" rel="noopener noreferrer">Apple Music</a>{% endif %}
           <a href="https://open.spotify.com/search/{{ r.search_term|urlencode:'' }}" target="_blank" rel="noopener noreferrer">Spotify</a>

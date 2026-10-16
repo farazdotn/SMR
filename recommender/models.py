@@ -24,6 +24,7 @@ class TrackRecommendation(models.Model):
     rationale = models.TextField()
     artwork_url = models.URLField(max_length=500, blank=True)
     link = models.URLField(max_length=500, blank=True)
+    preview_url = models.URLField(max_length=500, blank=True)
 
     class Meta:
         ordering = ["id"]
