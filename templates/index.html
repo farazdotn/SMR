@@ -14,12 +14,14 @@
     input[type=text] { flex: 1; padding: .7rem; border-radius: 8px; border: 1px solid #333; background: #1c1c1c; color: inherit; font-size: 1rem; }
     button { padding: .7rem 1.2rem; border: 0; border-radius: 8px; background: #e8b84a; color: #111; font-weight: 600; cursor: pointer; }
     .htmx-indicator { display: none; color: #e8b84a; margin-bottom: 1rem; }
-    .htmx-request.htmx-indicator { display: block; }
+    .htmx-request.htmx-indicator { display: flex; align-items: center; gap: .6rem; }
+    .spinner { width: 20px; height: 20px; border: 3px solid #333; border-top-color: #e8b84a; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .empty { color: #999; }
     .error { color: #ff8a80; }
     .searched { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
-    .searched img { width: 64px; border-radius: 6px; }
-    .card { display: flex; gap: 1rem; padding: 1rem; margin-bottom: .75rem; background: #1c1c1c; border-radius: 12px; }
+    .searched img { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+    .searched p { margin: 0 0 .4rem; }    .card { display: flex; gap: 1rem; padding: 1rem; margin-bottom: .75rem; background: #1c1c1c; border-radius: 12px; }
     .card img { width: 96px; height: 96px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
     .card h3 { margin: 0; }
     .artist { margin: 0 0 .5rem; color: #999; }
@@ -43,7 +45,10 @@
     <button type="submit">Judge me</button>
   </form>
 
-  <div id="spinner" class="htmx-indicator">Consulting the crate-diggers…</div>
+    <div id="spinner" class="htmx-indicator">
+    <span class="spinner"></span>
+    <span>Consulting the crate-diggers…</span>
+  </div>
 
   <main id="results">
     {% include "_results.html" %}

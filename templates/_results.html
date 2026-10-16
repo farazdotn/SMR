@@ -1,8 +1,11 @@
 {% if chosen %}
+  <div class="searched">
+    {% if chosen.artwork_url %}<img src="{{ chosen.artwork_url }}" alt="">{% endif %}
     <div>
       <p>Showing results for <strong>{{ chosen.title }}</strong> by {{ chosen.artist }}</p>
       {% if chosen.preview_url %}<audio controls preload="none" src="{{ chosen.preview_url }}"></audio>{% endif %}
     </div>
+  </div>
   {% if alternatives %}
     <details class="wrong">
       <summary>Wrong song?</summary>
@@ -38,6 +41,10 @@
           {% if r.link %}<a href="{{ r.link }}" target="_blank" rel="noopener noreferrer">Apple Music</a>{% endif %}
           <a href="https://open.spotify.com/search/{{ r.search_term|urlencode:'' }}" target="_blank" rel="noopener noreferrer">Spotify</a>
           <a href="https://www.youtube.com/results?search_query={{ r.search_term|urlencode:'' }}" target="_blank" rel="noopener noreferrer">YouTube</a>
+          <a href="https://soundcloud.com/search/sounds?q={{ r.search_term|urlencode:'' }}" target="_blank" rel="noopener noreferrer">SoundCloud</a>
+          {% if r.telegram_link %}
+          <a href="{{ r.telegram_link }}" target="_blank" rel="noopener noreferrer">Telegram</a>
+          {% endif %}
         </p>
       </div>
     </article>

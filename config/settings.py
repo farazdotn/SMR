@@ -133,3 +133,4 @@ MAILERS = {
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_MODEL = "gemini-3.5-flash-lite"
+TELEGRAM_BOT_USERNAME = "UncleFeryBot"

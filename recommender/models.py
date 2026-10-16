@@ -1,5 +1,6 @@
 from django.db import models
-
+from urllib.parse import quote
+from django.conf import settings
 
 class SearchQuery(models.Model):
     catalog_id = models.BigIntegerField(unique=True)
@@ -35,3 +36,9 @@ class TrackRecommendation(models.Model):
     @property
     def search_term(self):
         return f"{self.title} {self.artist}"
+
+    @property
+    def telegram_link(self):
+        if not settings.TELEGRAM_BOT_USERNAME:
+            return ""
+        return f"https://t.me/{settings.TELEGRAM_BOT_USERNAME}?text={quote(self.search_term, safe='')}"
