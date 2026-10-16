@@ -34,7 +34,8 @@
         <h3>{{ r.title }}</h3>
         <p class="artist">{{ r.artist }}</p>
         <p class="rationale">{{ r.rationale }}</p>
-                {% if r.preview_url %}<audio controls preload="none" src="{{ r.preview_url }}"></audio>
+                {% if r.preview_url %}
+                {% include "_player.html" with url=r.preview_url %}
                 {% endif %}
         <p class="links">
           {% if r.link %}<a href="{{ r.link }}" target="_blank" rel="noopener noreferrer">Apple Music</a>{% endif %}

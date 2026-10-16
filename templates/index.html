@@ -33,7 +33,6 @@
     .wrong a { display: flex; gap: .75rem; align-items: center; padding: .5rem; border-radius: 8px; color: inherit; text-decoration: none; }
     .wrong a:hover { background: #1c1c1c; }
     .wrong img { width: 40px; height: 40px; border-radius: 4px; }
-    audio { width: 100%; max-width: 320px; height: 32px; margin: 0 0 .6rem; }
     @keyframes fade-in { from { opacity: 0; } }
     @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
     .searched, .error { animation: fade-in .4s ease both; }
@@ -41,6 +40,17 @@
     @media (prefers-reduced-motion: reduce) {
       .card, .searched, .error, .htmx-request.htmx-indicator { animation: none; }
     }
+    .player { display: flex; align-items: center; gap: .6rem; max-width: 320px; margin: 0 0 .6rem; }
+    .player .play { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; transition: transform .15s ease; }
+    .player .play:hover { transform: scale(1.08); }
+    .player .play:focus-visible { outline: 2px solid #eee; outline-offset: 2px; }
+    .player .i-pause, .player.playing .i-play { display: none; }
+    .player.playing .i-pause { display: block; }
+    .player .track { flex: 1; padding: 6px 0; cursor: pointer; }
+    .player .bar { height: 6px; border-radius: 3px; background: #333; overflow: hidden; }
+    .player .fill { height: 100%; width: 0; background: #e8b84a; transition: width .25s linear; }
+    .player .time { min-width: 2.4em; text-align: right; font-size: .8rem; color: #999; font-variant-numeric: tabular-nums; }
+    .player.broken { opacity: .45; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -60,10 +70,53 @@
   <main id="results">
     {% include "_results.html" %}
   </main>
-  <script>
+<script>
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+  function render(audio) {
+    const player = audio.closest(".player");
+    if (!player) return;
+    const duration = audio.duration || 30;
+    player.classList.toggle("playing", !audio.paused);
+    player.querySelector(".play").setAttribute("aria-label", audio.paused ? "Play preview" : "Pause preview");
+    player.querySelector(".fill").style.width = `${(audio.currentTime / duration) * 100}%`;
+    player.querySelector(".time").textContent = fmt(audio.currentTime > 0 ? audio.currentTime : duration);
+  }
+
+  // Media events don't bubble, so we listen in the capture phase on document.
+  // That keeps working after HTMX swaps in new results.
+  ["play", "pause", "timeupdate", "loadedmetadata"].forEach((type) =>
+    document.addEventListener(type, (e) => e.target instanceof HTMLAudioElement && render(e.target), true)
+  );
+
+  // Only one clip at a time. Pausing the others fires their "pause" event,
+  // which flips their buttons back to ▶ automatically.
   document.addEventListener("play", (e) => {
     document.querySelectorAll("audio").forEach((a) => { if (a !== e.target) a.pause(); });
   }, true);
- </script>
+
+  document.addEventListener("ended", (e) => {
+    if (e.target instanceof HTMLAudioElement) { e.target.currentTime = 0; render(e.target); }
+  }, true);
+
+  // Expired or dead preview URLs: grey the player out instead of leaving a dead button.
+  document.addEventListener("error", (e) => {
+    if (!(e.target instanceof HTMLAudioElement)) return;
+    const player = e.target.closest(".player");
+    if (player) { player.classList.add("broken"); player.querySelector(".time").textContent = "n/a"; }
+  }, true);
+
+  document.addEventListener("click", (e) => {
+    const player = e.target.closest(".player");
+    if (!player) return;
+    const audio = player.querySelector("audio");
+    if (e.target.closest(".play")) {
+      audio.paused ? audio.play().catch(() => {}) : audio.pause();
+    } else if (e.target.closest(".track") && audio.duration) {
+      const rect = player.querySelector(".track").getBoundingClientRect();
+      audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+    }
+  });
+</script>
 </body>
 </html>
