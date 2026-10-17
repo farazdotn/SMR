@@ -1,4 +1,29 @@
-.venv/
+# Secrets and local config. Never commit these.
 .env
+.env.*
+!.env.example
+
+# Local database (anyone who clones the repo creates their own with `migrate`)
 db.sqlite3
+db.sqlite3-journal
+
+# Python
 __pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# Collected static files, if you ever run collectstatic
+staticfiles/
+
+# Local tooling and output
+code2prompt.exe
+*.log
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+

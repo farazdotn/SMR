@@ -21,7 +21,8 @@
     .error { color: #ff8a80; }
     .searched { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
     .searched img { width: 56px; height: 56px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
-    .searched p { margin: 0 0 .4rem; }    .card { display: flex; gap: 1rem; padding: 1rem; margin-bottom: .75rem; background: #1c1c1c; border-radius: 12px; }
+    .searched p { margin: 0 0 .4rem; }
+    .card { display: flex; gap: 1rem; padding: 1rem; margin-bottom: .75rem; background: #1c1c1c; border-radius: 12px; }
     .card img { width: 96px; height: 96px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
     .card h3 { margin: 0; }
     .artist { margin: 0 0 .5rem; color: #999; }
@@ -57,12 +58,12 @@
   <h1>Crate Digger</h1>
   <p class="tagline">Tell us a song. We'll tell you what you should've been listening to.</p>
 
-  <form hx-get="{% url 'search' %}" hx-target="#results" hx-indicator="#spinner" hx-push-url="true">
+  <form hx-get="{% url 'search' %}" hx-target="#results" hx-indicator="#spinner" hx-push-url="true" hx-disabled-elt="find button">
     <input type="text" name="q" value="{{ q }}" placeholder="Song and artist, e.g. Reckoner Radiohead" required autofocus>
     <button type="submit">Judge me</button>
   </form>
 
-    <div id="spinner" class="htmx-indicator">
+  <div id="spinner" class="htmx-indicator">
     <span class="spinner"></span>
     <span>Consulting the crate-diggers…</span>
   </div>

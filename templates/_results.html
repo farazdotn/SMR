@@ -26,7 +26,7 @@
 
 {% if error %}
   <p class="error">{{ error }}</p>
-{% elif search %}
+{% elif recommendations %}
   {% for r in recommendations %}
     <article class="card" style="--i: {{ forloop.counter0 }}">
       {% if r.artwork_url %}<img src="{{ r.artwork_url }}" alt="">{% endif %}

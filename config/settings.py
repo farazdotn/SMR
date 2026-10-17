@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,16 +21,59 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+def env_bool(name, default=False):
+    value = os.environ.get(name, "").strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-d9%%yl*e3=^3r0*2$f25)&)cfmv*z@5*s)*)p&r-jn^1i(hvq9"
+
+def env_int(name, default):
+    value = os.environ.get(name, "").strip()
+    if not value:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        raise ImproperlyConfigured(f"{name} must be a whole number, got {value!r}.") from None
+
+
+def env_list(name):
+    """Comma-separated environment variable -> list, ignoring blanks."""
+    return [item.strip() for item in os.environ.get(name, "").split(",") if item.strip()]
+
+
+# Out of the box this is a local development setup: add GEMINI_API_KEY to .env
+# and run it, nothing else is needed. The rest of this block only matters if you
+# put the site on a server, where you set DJANGO_DEBUG=False (see .env.example).
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool("DJANGO_DEBUG", default=True)
 
-ALLOWED_HOSTS = []
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            "DJANGO_DEBUG is off, so DJANGO_SECRET_KEY is required. Put one in your .env file "
+            "(see .env.example), or remove DJANGO_DEBUG=False to run locally."
+        )
+    SECRET_KEY = "django-insecure-dev-only-key-never-use-this-in-production"
+
+# Addresses the site may be served under. In debug mode the local ones are always
+# allowed, so a value in .env can only add to them (say, your phone's address on
+# the local network) and can never lock you out of localhost.
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS")
+if DEBUG:
+    ALLOWED_HOSTS += [h for h in (".localhost", "127.0.0.1", "[::1]") if h not in ALLOWED_HOSTS]
+elif not ALLOWED_HOSTS:
+    raise ImproperlyConfigured(
+        "DJANGO_DEBUG is off, so DJANGO_ALLOWED_HOSTS is required: list your domain(s), "
+        "comma-separated, in .env. Remove DJANGO_DEBUG=False to run locally."
+    )
+
+# Only needed if you serve the site over HTTPS, e.g. https://example.com
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 
 # Application definition
@@ -125,12 +169,17 @@ STATIC_URL = "static/"
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
-    },
-}
+# This site doesn't send email. In development Django's console backend prints
+# any email to the terminal. That backend is development-only (`check --deploy`
+# rejects it), so in production Django's default is left in place.
+if DEBUG:
+    MAILERS = {
+        "default": {
+            "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        },
+    }
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-GEMINI_MODEL = "gemini-3.5-flash-lite"
-TELEGRAM_BOT_USERNAME = "UncleFeryBot"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip() or "gemini-3.5-flash-lite"
+# Set TELEGRAM_BOT_USERNAME= (empty) in .env to hide the Telegram link.
+TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "UncleFeryBot")
