@@ -39,7 +39,7 @@
     .searched, .error { animation: fade-in .4s ease both; }
     .card { animation: rise .5s ease both; animation-delay: calc(var(--i, 0) * 120ms); }
     @media (prefers-reduced-motion: reduce) {
-      .card, .searched, .error, .htmx-request.htmx-indicator { animation: none; }
+      .card, .searched, .error, .htmx-request.htmx-indicator, .commentary { animation: none; }
     }
     .player { display: flex; align-items: center; gap: .6rem; max-width: 320px; margin: 0 0 .6rem; }
     .player .play { width: 32px; height: 32px; padding: 0; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; transition: transform .15s ease; }
@@ -52,6 +52,8 @@
     .player .fill { height: 100%; width: 0; background: #e8b84a; transition: width .25s linear; }
     .player .time { min-width: 2.4em; text-align: right; font-size: .8rem; color: #999; font-variant-numeric: tabular-nums; }
     .player.broken { opacity: .45; pointer-events: none; }
+    .commentary { margin-top: 1.25rem; padding: 1rem 1.25rem; background: #1c1c1c; border-left: 3px solid #e8b84a; border-radius: 0 12px 12px 0; color: #ddd; line-height: 1.55; animation: rise .5s ease both; animation-delay: calc(var(--i, 0) * 120ms); }
+    .commentary p { margin: 0; }
   </style>
 </head>
 <body>

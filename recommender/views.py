@@ -61,9 +61,10 @@ def search(request):
             context["chosen"] = chosen
             context["alternatives"] = _alternatives(candidates, chosen)
 
-            recommendations = _get_results(chosen)
+            recommendations, commentary = _get_results(chosen)
             if recommendations:
                 context["recommendations"] = recommendations
+                context["commentary"] = commentary
             else:
                 context["error"] = "I couldn't verify any recommendations for that one. Try another song."
     except GeminiRateLimitError:
@@ -156,11 +157,11 @@ def _get_results(track):
     """
     key = song_key(track.title, track.artist)
     cached = SearchQuery.objects.filter(song_key=key).first()
-    if cached:
+    if cached and cached.commentary:
         SearchQuery.objects.filter(pk=cached.pk).update(request_count=F("request_count") + 1)
-        return list(cached.recommendations.all())
+        return list(cached.recommendations.all()), cached.commentary
 
-    recs = get_recommendations(track.title, track.artist)
+    recs, commentary = get_recommendations(track.title, track.artist)
     verified, failed = _verify_until_enough(track, recs)
 
     if not verified:
@@ -168,7 +169,7 @@ def _get_results(track):
             # Nothing verified and some lookups errored: iTunes is the problem,
             # not Gemini's picks. Say so instead of "couldn't verify anything".
             raise CatalogError(f"{failed} iTunes lookups failed and none succeeded.")
-        return []
+        return [], ""
 
     rows = [
         TrackRecommendation(
@@ -184,9 +185,11 @@ def _get_results(track):
     ]
 
     if failed or len(rows) < MIN_TO_CACHE:
-        return rows  # show them, but don't cache
+        return rows, commentary  # show them, but don't cache
 
     with transaction.atomic():
+        if cached:
+            cached.delete()
         search_obj, created = SearchQuery.objects.get_or_create(
             song_key=key,
             defaults={
@@ -195,10 +198,11 @@ def _get_results(track):
                 "artist": track.artist,
                 "artwork_url": track.artwork_url,
                 "link": track.link,
+                "commentary": commentary,
             },
         )
         if created:
             for row in rows:
                 row.search_query = search_obj
             TrackRecommendation.objects.bulk_create(rows)
-    return list(search_obj.recommendations.all())
+    return list(search_obj.recommendations.all()), search_obj.commentary

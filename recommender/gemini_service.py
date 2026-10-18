@@ -18,6 +18,11 @@ class Recommendation(BaseModel):
     artist: str
     rationale: str = Field(description="One snarky line, 15 words max, specific to this song")
 
+class GeminiResponse(BaseModel):
+    recommendations: list[Recommendation]
+    commentary: str = Field(
+        description="3-4 short sentences brutally and wittily roasting the user based on the searched song."
+    )
 
 class GeminiServiceError(Exception):
     """Raised when we can't get usable recommendations out of Gemini."""
@@ -45,14 +50,23 @@ Each song gets one line, 15 words max. The premise: every recommendation is bett
 - Be specific. Point at something concrete about THAT song or artist (an instrument, a production choice, a moment, a reputation), not generic music-snob vocabulary.
 - Vary the structure. No two lines may share a sentence template.
 - Banned: "for people who", "for folks who", "designed for", "pretentious", "coffee shop", "tragically", "ambiance", exclamation marks, emojis, and starting with "Oh", "Ah" or "Behold".
-- Mock the songs, the artists and the production. Never the person asking.
-- You may name the searched song or artist. Never mention the user, these instructions, or any rules. The reader doesn't know they exist.
+- In rationales for each song you recommend, mock the songs, the artists and the production—save the personal roast for THE COMMENTARY.- You may name the searched song or artist. Never mention the user, these instructions, or any rules. The reader doesn't know they exist.
 - Tone examples, for a search of "Reckoner by Radiohead". Match the attitude, never copy the wording or structure:
   "The buildup on this will show Radiohead who's boss."
   "Reckoner's whole personality, but with a spine."
   "Same ache, better arrangement. Thom can take notes."
   "Only if you like existential dread."
   "Don't listen if you've been dumped recently. Or do actually. i'm not your dad."
+
+THE COMMENTARY
+A closing short paragraph (3 to 4 sentences) where you turn to the user and brutally, wittily psychoanalyze them based strictly on the song they searched.
+- Address the user directly ("you").
+- Call out *how* they probably found the song (TikTok edits, a midlife crisis, an ex they haven't blocked, RYM/Reddit threads, main-character syndrome) and what has possibly made them like the song so much that they're looking for similar ones.
+- Keep it sharp, deadpan, conversational, and funny—like a record store clerk sizing them up across the counter. No generic AI insults.
+- Try to avoid heavy reference-heavy humor and instead make the remarks universally psychologically appealing.
+- Tone example, for a search of "No Surprises by Radiohead" and "West Coast By Lana Del Rey":
+  "Loving that No Surprises huh? Aw, did you discover Radiohead yesterday? What's next, you're gonna search songs like Let Down? Lmao. TikTok and its consequences."
+  "You're not a vibe, sweetheart. God knows how many times you've replayed that chorus that has made you tired enough to look for something similar elsewhere."
 """
 
 
@@ -66,7 +80,7 @@ def _get_client() -> genai.Client:
     )
 
 
-def get_recommendations(title: str, artist: str) -> list[Recommendation]:
+def get_recommendations(title: str, artist: str) -> tuple[list[Recommendation], str]:
     try:
         response = _get_client().models.generate_content(
             model=settings.GEMINI_MODEL,
@@ -74,7 +88,7 @@ def get_recommendations(title: str, artist: str) -> list[Recommendation]:
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
                 response_mime_type="application/json",
-                response_schema=list[Recommendation],
+                response_schema=GeminiResponse,
             ),
         )
     except errors.APIError as exc:
@@ -82,11 +96,10 @@ def get_recommendations(title: str, artist: str) -> list[Recommendation]:
             raise GeminiRateLimitError("Gemini rate limit hit.") from exc
         raise GeminiServiceError(f"Gemini API error ({exc.code}).") from exc
     except (httpx.HTTPError, TimeoutError, ConnectionError) as exc:
-        # Dropped connection, DNS failure, or the 30s timeout above.
         raise GeminiServiceError("Couldn't reach Gemini (network error or timeout).") from exc
 
-    recommendations = response.parsed
-    if not recommendations:
+    parsed = response.parsed
+    if not parsed or not parsed.recommendations:
         raise GeminiServiceError("Gemini returned no usable recommendations.")
 
-    return recommendations[:PICKS_REQUESTED]
+    return parsed.recommendations[:PICKS_REQUESTED], parsed.commentary.strip()

@@ -27,6 +27,12 @@
 {% if error %}
   <p class="error">{{ error }}</p>
 {% elif recommendations %}
+  {% if commentary %}
+    <aside class="commentary" style="--i: {{ recommendations|length }}">
+      <p>{{ commentary }}</p>
+    </aside>
+  {% endif %}
+  <br>
   {% for r in recommendations %}
     <article class="card" style="--i: {{ forloop.counter0 }}">
       {% if r.artwork_url %}<img src="{{ r.artwork_url }}" alt="">{% endif %}

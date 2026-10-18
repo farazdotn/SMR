@@ -14,6 +14,7 @@ class SearchQuery(models.Model):
     artist = models.CharField(max_length=255)
     artwork_url = models.URLField(max_length=500, blank=True)
     link = models.URLField(max_length=500, blank=True)
+    commentary = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     request_count = models.PositiveIntegerField(default=1)
 
