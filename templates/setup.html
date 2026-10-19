@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setup — Crate Digger</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: system-ui, sans-serif; background: #111; color: #eee; max-width: 640px; margin: 0 auto; padding: 2rem 1rem; }
+    h1 { margin-bottom: .25rem; }
+    .tagline { color: #999; margin-top: 0; }
+    .card { background: #1c1c1c; padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem; }
+    .card h2 { margin-top: 0; font-size: 1.15rem; }
+    .notice { background: #2a2212; border-left: 3px solid #e8b84a; padding: .75rem 1rem; border-radius: 0 8px 8px 0; color: #f3d486; margin-bottom: 1rem; font-size: .95rem; }
+    form { display: flex; gap: .5rem; margin: 1rem 0; }
+    input { flex: 1; padding: .7rem; border-radius: 8px; border: 1px solid #333; background: #111; color: inherit; font-size: 1rem; }
+    button { padding: .7rem 1.2rem; border: 0; border-radius: 8px; background: #e8b84a; color: #111; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
+    .error { color: #ff8a80; margin: .5rem 0; }
+    .steps { color: #ccc; padding-left: 1.25rem; line-height: 1.7; margin: 1rem 0 0; }
+    .steps a { color: #e8b84a; }
+    .steps code { background: #111; padding: .15rem .35rem; border-radius: 4px; font-size: .9em; }
+  </style>
+</head>
+<body>
+  <h1>Crate Digger</h1>
+  <p class="tagline">Tell us a song. We'll tell you what you should've been listening to.</p>
+
+  <section class="card">
+    <h2>One-time setup: Enter your Gemini API Key</h2>
+
+    {% if vpn_warning %}
+      <div class="notice">{{ vpn_warning }}</div>
+    {% endif %}
+
+    <form method="post" onsubmit="const b = this.querySelector('button'); b.disabled = true; b.textContent = 'Verifying…';">
+      {% csrf_token %}
+      <input type="password" name="api_key" placeholder="Paste your key here (AIza...)" required autofocus>
+      <button type="submit">Save &amp; Start</button>
+    </form>
+
+    {% if error %}
+      <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <ol class="steps">
+      <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> and sign in with your Google account.</li>
+      <li>Click <strong>Create API key</strong> and copy it (it's free).</li>
+      <li>Paste it above. It'll be verified and saved to your local <code>.env</code> file so you never have to enter it again.</li>
+    </ol>
+  </section>
+</body>
+</html>

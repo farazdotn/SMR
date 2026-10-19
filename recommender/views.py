@@ -69,12 +69,9 @@ def search(request):
                 context["error"] = "I couldn't verify any recommendations for that one. Try another song."
     except GeminiRateLimitError:
         context["error"] = "The robot musicologist needs a break. Try again in a minute."
-    except GeminiServiceError:
-        logger.exception("Gemini failed")
-        context["error"] = "The musicologist is having a moment. Try again shortly."
-    except CatalogError:
-        logger.exception("iTunes lookup failed")
-        context["error"] = "Couldn't reach the music catalog. Try again shortly."
+    except (GeminiServiceError, CatalogError):
+        logger.exception("External lookup failed")
+        context["error"] = "Connection error — you might need to either turn on or off your VPN."
 
     return render(request, template, context)
 

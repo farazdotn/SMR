@@ -82,6 +82,7 @@ def _get_client() -> genai.Client:
 
 def get_recommendations(title: str, artist: str) -> tuple[list[Recommendation], str]:
     try:
+        httpx.get("https://generativelanguage.googleapis.com", timeout=3)
         response = _get_client().models.generate_content(
             model=settings.GEMINI_MODEL,
             contents=f"{title} by {artist}",
