@@ -2,10 +2,10 @@
 """One-click bootstrapper: creates .venv, installs deps, migrates DB, opens browser, runs server."""
 import hashlib
 import os
+import socket
 import subprocess
 import sys
 import time
-import urllib.request
 import venv
 import webbrowser
 from pathlib import Path
@@ -14,7 +14,8 @@ ROOT = Path(__file__).resolve().parent
 VENV_DIR = ROOT / ".venv"
 REQ_FILE = ROOT / "requirements.txt"
 STAMP_FILE = VENV_DIR / ".installed.sha256"
-URL = "http://127.0.0.1:8000"
+PORT = 8000
+URL = f"http://127.0.0.1:{PORT}"
 
 
 def clear_screen():
@@ -25,6 +26,21 @@ def venv_python() -> Path:
     if os.name == "nt":
         return VENV_DIR / "Scripts" / "python.exe"
     return VENV_DIR / "bin" / "python"
+
+
+def free_port_if_stuck():
+    """If an old server was left running in the background on PORT, kill it."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if s.connect_ex(("127.0.0.1", PORT)) != 0:
+            return
+    if os.name == "nt":
+        subprocess.run(
+            f'for /f "tokens=5" %a in (\'netstat -aon ^| findstr :{PORT} ^| findstr LISTENING\') do taskkill /F /PID %a',
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    time.sleep(0.3)
 
 
 def ensure_venv_and_deps():
@@ -50,11 +66,10 @@ def wait_until_ready(server_proc) -> bool:
     for _ in range(60):
         if server_proc.poll() is not None:
             return False
-        try:
-            urllib.request.urlopen(URL, timeout=1)
-            return True
-        except Exception:
-            time.sleep(0.2)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("127.0.0.1", PORT)) == 0:
+                return True
+        time.sleep(0.2)
     return False
 
 
@@ -65,23 +80,22 @@ def main():
 
     clear_screen()
     print("\n  Starting Crate Digger, hang tight...\n")
+    free_port_if_stuck()
     ensure_venv_and_deps()
     py = str(venv_python())
 
     print("  [3/3] Preparing local database...")
     subprocess.check_call([py, "manage.py", "migrate", "--noinput", "-v", "0"])
 
-    # Run Django quietly in the background (--noreload keeps it in a single process)
+    # BOTH stdout and stderr must be DEVNULL so the 4KB OS pipe buffer never fills up and freezes Django
     server = subprocess.Popen(
-        [py, "manage.py", "runserver", "127.0.0.1:8000", "--noreload"],
+        [py, "manage.py", "runserver", f"127.0.0.1:{PORT}", "--noreload"],
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
+        stderr=subprocess.DEVNULL,
     )
 
     if not wait_until_ready(server):
-        err = server.stderr.read() if server.stderr else "Unknown error"
-        raise RuntimeError(f"Server couldn't start:\n{err}")
+        raise RuntimeError("Server couldn't start on port 8000.")
 
     webbrowser.open(URL)
     clear_screen()
