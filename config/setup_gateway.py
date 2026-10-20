@@ -8,22 +8,31 @@ from google.genai import errors, types
 
 VPN_MESSAGE = "Connection error. You might need to either turn on or off your VPN."
 PING_URL = "https://generativelanguage.googleapis.com/v1beta/models?key=ping"
+NETWORK_ERRORS = (httpx.HTTPError, TimeoutError, ConnectionError, OSError)
+
+
+def _is_location_blocked(message: str) -> bool:
+    """Check if Google's error response indicates a regional/geo-IP restriction."""
+    text = message.lower()
+    return "location" in text or "region" in text or "country" in text
 
 
 def _check_gemini_reachable() -> str | None:
-    """Return a warning if Gemini is unreachable or geo-blocked, else None."""
+    """Return a warning message if Gemini is unreachable or geo-blocked, else None."""
     try:
-        resp = httpx.get(PING_URL, timeout=3.5)
-        if "location" in resp.text.lower() or resp.status_code == 403:
+        response = httpx.get(PING_URL, timeout=3.5)
+        if _is_location_blocked(response.text) or response.status_code == 403:
             return VPN_MESSAGE
         return None
-    except (httpx.HTTPError, TimeoutError, ConnectionError):
+    except NETWORK_ERRORS:
         return VPN_MESSAGE
 
 
 def _verify_api_key(api_key: str) -> None:
     """Confirm Google accepts the API key before saving it (uses zero quota)."""
     try:
+        # Fast pre-check so an offline connection fails in 3s instead of
+        # getting stuck in the Google SDK's internal retry loop.
         httpx.get(PING_URL, timeout=3)
         client = genai.Client(
             api_key=api_key,
@@ -31,16 +40,24 @@ def _verify_api_key(api_key: str) -> None:
         )
         client.models.get(model=settings.GEMINI_MODEL)
     except errors.APIError as exc:
-        msg = str(exc).lower()
-        if "location" in msg or "region" in msg or "country" in msg:
+        if _is_location_blocked(str(exc)):
             raise ValueError(VPN_MESSAGE) from exc
         if exc.code in (400, 401, 403):
             raise ValueError(
                 "Google rejected that API key. Make sure you copied the whole thing."
             ) from exc
         raise ValueError(VPN_MESSAGE) from exc
-    except (httpx.HTTPError, TimeoutError, ConnectionError, OSError) as exc:
+    except NETWORK_ERRORS as exc:
         raise ValueError(VPN_MESSAGE) from exc
+
+
+def _save_api_key(api_key: str) -> None:
+    """Write the API key to the local .env file and load it into the current process."""
+    env_path = settings.BASE_DIR / ".env"
+    env_path.touch(exist_ok=True)
+    set_key(str(env_path), "GEMINI_API_KEY", api_key)
+    os.environ["GEMINI_API_KEY"] = api_key
+    settings.GEMINI_API_KEY = api_key
 
 
 class SetupGatewayMiddleware:
@@ -53,8 +70,10 @@ class SetupGatewayMiddleware:
         return self.get_response(request)
 
     def process_view(self, request, view_func, view_args, view_kwargs):
+        # We use process_view instead of __call__ so Django's CsrfViewMiddleware
+        # validates the POST token before this code runs.
         if settings.GEMINI_API_KEY:
-            return None  # Key exists; let the app run normally
+            return None
 
         error = None
         vpn_warning = None
@@ -69,11 +88,7 @@ class SetupGatewayMiddleware:
                 except ValueError as exc:
                     error = str(exc)
                 else:
-                    env_path = settings.BASE_DIR / ".env"
-                    env_path.touch(exist_ok=True)
-                    set_key(str(env_path), "GEMINI_API_KEY", api_key)
-                    os.environ["GEMINI_API_KEY"] = api_key
-                    settings.GEMINI_API_KEY = api_key
+                    _save_api_key(api_key)
                     return redirect(request.path)
         else:
             vpn_warning = _check_gemini_reachable()

@@ -10,10 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
-from pathlib import Path
 import os
-from dotenv import load_dotenv
+from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,19 +28,15 @@ def env_bool(name, default=False):
     return value in {"1", "true", "yes", "on"}
 
 
-def env_int(name, default):
-    value = os.environ.get(name, "").strip()
-    if not value:
-        return default
-    try:
-        return int(value)
-    except ValueError:
-        raise ImproperlyConfigured(f"{name} must be a whole number, got {value!r}.") from None
-
-
 def env_list(name):
-    """Comma-separated environment variable -> list, ignoring blanks."""
-    return [item.strip() for item in os.environ.get(name, "").split(",") if item.strip()]
+    """Parse a comma-separated environment variable into a list of non-empty strings."""
+    raw_value = os.environ.get(name, "")
+    items = []
+    for item in raw_value.split(","):
+        cleaned = item.strip()
+        if cleaned:
+            items.append(cleaned)
+    return items
 
 
 # Out of the box this is a local development setup: add GEMINI_API_KEY to .env
@@ -65,7 +61,9 @@ if not SECRET_KEY:
 # the local network) and can never lock you out of localhost.
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS")
 if DEBUG:
-    ALLOWED_HOSTS += [h for h in (".localhost", "127.0.0.1", "[::1]") if h not in ALLOWED_HOSTS]
+    for local_host in (".localhost", "127.0.0.1", "[::1]"):
+        if local_host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(local_host)
 elif not ALLOWED_HOSTS:
     raise ImproperlyConfigured(
         "DJANGO_DEBUG is off, so DJANGO_ALLOWED_HOSTS is required: list your domain(s), "
@@ -85,7 +83,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'recommender',
+    "recommender",
 ]
 
 MIDDLEWARE = [
@@ -104,7 +102,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / 'templates'],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

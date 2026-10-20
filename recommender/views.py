@@ -25,14 +25,26 @@ def index(request):
 
 
 def _wants_fragment(request):
-    """True for a normal htmx request (swap just the results).
+    """Return True for a normal htmx request (swap just the results).
 
     When htmx restores a page after Back/Forward it also sends HX-Request,
     but it expects the full page back, so those requests are excluded.
     """
-    return bool(request.headers.get("HX-Request")) and not request.headers.get(
-        "HX-History-Restore-Request"
-    )
+    is_htmx = bool(request.headers.get("HX-Request"))
+    is_history_restore = bool(request.headers.get("HX-History-Restore-Request"))
+    return is_htmx and not is_history_restore
+
+
+def _select_candidate(candidates, pick_id):
+    """Return the candidate matching pick_id, or the top search result by default.
+
+    Compares IDs as strings so non-numeric user input in the query string
+    can never raise a ValueError.
+    """
+    for candidate in candidates:
+        if str(candidate.catalog_id) == pick_id:
+            return candidate
+    return candidates[0]
 
 
 # The same URL returns a fragment or a full page depending on these headers,
@@ -53,11 +65,7 @@ def search(request):
         if not candidates:
             context["error"] = f"Couldn't find '{q}'. Check the spelling, or add the artist's name."
         else:
-            # Compare as strings: never turns user input into an int, so
-            # "²" or a 5000-digit number can't raise ValueError.
-            chosen = next(
-                (c for c in candidates if str(c.catalog_id) == pick), candidates[0]
-            )
+            chosen = _select_candidate(candidates, pick)
             context["chosen"] = chosen
             context["alternatives"] = _alternatives(candidates, chosen)
 
@@ -80,32 +88,33 @@ def _alternatives(candidates, chosen, max_items=5):
     """Other songs the user might have meant, minus re-releases of the chosen one."""
     seen = {song_key(chosen.title, chosen.artist)}
     alts = []
-    for c in candidates:
-        key = song_key(c.title, c.artist)
+    for candidate in candidates:
+        key = song_key(candidate.title, candidate.artist)
         if key in seen:
             continue
         seen.add(key)
-        alts.append(c)
+        alts.append(candidate)
     return alts[:max_items]
 
 
 def _safe_verify(rec):
-    """Look up one recommendation. Returns (match, ok).
+    """Look up one recommendation in iTunes. Returns (rec, match, lookup_ok).
 
-    ok is False when the lookup itself failed (network error, rate limit),
-    as opposed to the lookup working but finding no matching song.
+    lookup_ok is False when the HTTP request itself failed (network error,
+    rate limit), as opposed to the lookup succeeding but finding no match.
     """
     try:
-        return verify_recommendation(rec.title, rec.artist), True
+        match = verify_recommendation(rec.title, rec.artist)
+        return rec, match, True
     except CatalogError:
         logger.warning("iTunes lookup lowk failed while verifying %r by %r", rec.title, rec.artist)
-        return None, False
+        return rec, None, False
 
 
-def _verify_all(recs):
-    """Look up a batch of recommendations in iTunes at once, keeping their order."""
+def _verify_batch(batch):
+    """Look up a batch of recommendations in iTunes concurrently, keeping their order."""
     with ThreadPoolExecutor(max_workers=SHOWN_COUNT) as pool:
-        return list(pool.map(_safe_verify, recs))
+        return list(pool.map(_safe_verify, batch))
 
 
 def _verify_until_enough(track, recs):
@@ -116,8 +125,6 @@ def _verify_until_enough(track, recs):
     Returns (verified, failed): a list of (recommendation, catalog match) and
     the number of lookups that errored out.
     """
-    # song_key ignores "- Remastered" and "(feat. X)" tags, so a re-release of
-    # the searched song is caught here too.
     seen = {song_key(track.title, track.artist)}  # never recommend the searched song
     verified = []
     failed = 0
@@ -125,9 +132,10 @@ def _verify_until_enough(track, recs):
     for start in range(0, len(recs), SHOWN_COUNT):
         if len(verified) >= SHOWN_COUNT:
             break
+
         batch = recs[start:start + SHOWN_COUNT]
-        for rec, (match, ok) in zip(batch, _verify_all(batch)):
-            if not ok:
+        for rec, match, lookup_ok in _verify_batch(batch):
+            if not lookup_ok:
                 failed += 1
                 continue
             if match is None:
@@ -138,11 +146,16 @@ def _verify_until_enough(track, recs):
             seen.add(key)
             verified.append((rec, match))
 
+        # If every lookup in the first batch failed with a network error,
+        # iTunes is unreachable—don't waste time trying the next batch.
+        if not verified and failed == len(batch):
+            break
+
     return verified[:SHOWN_COUNT], failed
 
 
 def _get_results(track):
-    """Cache-first. Returns a list of TrackRecommendation, empty if nothing verified.
+    """Cache-first. Returns (recommendations_list, commentary_str).
 
     The cache is keyed by song (title + artist), not by iTunes track id, so the
     single, the album cut and the remaster of one song share one entry and one
@@ -168,24 +181,26 @@ def _get_results(track):
             raise CatalogError(f"{failed} iTunes lookups failed and none succeeded. Brutal.")
         return [], ""
 
-    rows = [
-        TrackRecommendation(
-            catalog_id=match.catalog_id,
-            title=match.title,
-            artist=match.artist,
-            rationale=rec.rationale,
-            artwork_url=match.artwork_url,
-            link=match.link,
-            preview_url=match.preview_url,
+    rows = []
+    for rec, match in verified:
+        rows.append(
+            TrackRecommendation(
+                catalog_id=match.catalog_id,
+                title=match.title,
+                artist=match.artist,
+                rationale=rec.rationale,
+                artwork_url=match.artwork_url,
+                link=match.link,
+                preview_url=match.preview_url,
+            )
         )
-        for rec, match in verified
-    ]
 
     if failed or len(rows) < MIN_TO_CACHE:
         return rows, commentary  # show them, but don't cache
 
     with transaction.atomic():
         if cached:
+            # Replace any old cache entry saved before the commentary field existed.
             cached.delete()
         search_obj, created = SearchQuery.objects.get_or_create(
             song_key=key,
@@ -202,4 +217,5 @@ def _get_results(track):
             for row in rows:
                 row.search_query = search_obj
             TrackRecommendation.objects.bulk_create(rows)
+
     return list(search_obj.recommendations.all()), search_obj.commentary

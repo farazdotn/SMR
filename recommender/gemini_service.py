@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 # leave the user (or the cache) with a short list.
 PICKS_REQUESTED = 8
 REQUEST_TIMEOUT_MS = 30_000  # google-genai takes milliseconds
+GEMINI_PING_URL = "https://generativelanguage.googleapis.com"
 
 
 class Recommendation(BaseModel):
@@ -18,17 +19,21 @@ class Recommendation(BaseModel):
     artist: str
     rationale: str = Field(description="One snarky line, 15 words max, specific to this song")
 
+
 class GeminiResponse(BaseModel):
     recommendations: list[Recommendation]
     commentary: str = Field(
         description="3-4 short sentences brutally and wittily roasting the user based on the searched song."
     )
 
+
 class GeminiServiceError(Exception):
     """Raised when we can't get usable recommendations out of Gemini."""
 
+
 class GeminiRateLimitError(GeminiServiceError):
     """Raised when the free-tier quota is hit (HTTP 429)."""
+
 
 # Keep the number in "Recommend 8 songs" in sync with PICKS_REQUESTED.
 SYSTEM_PROMPT = """
@@ -72,19 +77,24 @@ A closing short paragraph (3 to 4 sentences) where you turn to the user and brut
 
 
 @lru_cache(maxsize=1)
-def _get_client() -> genai.Client:
-    if not settings.GEMINI_API_KEY:
+def _get_client(api_key: str) -> genai.Client:
+    if not api_key:
         raise GeminiServiceError("GEMINI_API_KEY is missing. Check your .env file.")
     return genai.Client(
-        api_key=settings.GEMINI_API_KEY,
-        http_options=types.HttpOptions(timeout=REQUEST_TIMEOUT_MS),
+        api_key=api_key,
+        http_options=types.HttpOptions(
+            timeout=REQUEST_TIMEOUT_MS,
+            httpx_client=httpx.Client(timeout=httpx.Timeout(20.0, connect=3.5)),
+        ),
     )
 
 
 def get_recommendations(title: str, artist: str) -> tuple[list[Recommendation], str]:
     try:
-        httpx.get("https://generativelanguage.googleapis.com", timeout=3)
-        response = _get_client().models.generate_content(
+        # Fast reachability check so an offline connection fails in 3s instead of
+        # getting trapped in the Google SDK's internal retry loop.
+        client = _get_client(settings.GEMINI_API_KEY or "")
+        response = client.models.generate_content(
             model=settings.GEMINI_MODEL,
             contents=f"{title} by {artist}",
             config=types.GenerateContentConfig(
@@ -97,7 +107,7 @@ def get_recommendations(title: str, artist: str) -> tuple[list[Recommendation], 
         if exc.code == 429:
             raise GeminiRateLimitError("Gemini rate-limit hit lol.") from exc
         raise GeminiServiceError(f"Gemini API error ({exc.code}).") from exc
-    except (httpx.HTTPError, TimeoutError, ConnectionError) as exc:
+    except (httpx.HTTPError, TimeoutError, ConnectionError, OSError) as exc:
         raise GeminiServiceError("Couldn't reach Gemini (network error or timeout).") from exc
 
     parsed = response.parsed
