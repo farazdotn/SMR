@@ -6,7 +6,11 @@ from google.genai import errors, types
 from pydantic import BaseModel, Field
 
 PICKS_REQUESTED = 8
-REQUEST_TIMEOUT_MS = 30_000  
+FALLBACK_MODELS = (
+    "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemini-3.1-flash-lite",
+)
 
 class Recommendation(BaseModel):
     title: str
@@ -27,6 +31,9 @@ class GeminiServiceError(Exception):
 
 class GeminiRateLimitError(GeminiServiceError):
     """Raised when the iTunes Search API can't be reached or misbehaves."""
+
+class GeminiOverloadError(GeminiServiceError):
+    """Raised when Google's Gemini servers return 503/504 high-demand errors."""
 
 
 SYSTEM_PROMPT = """
@@ -76,33 +83,48 @@ def _get_client(api_key: str) -> genai.Client:
     return genai.Client(
         api_key=api_key,
         http_options=types.HttpOptions(
-            timeout=REQUEST_TIMEOUT_MS,
-            httpx_client=httpx.Client(timeout=httpx.Timeout(20.0, connect=3.5)),
+            timeout=12_000,  # 12s max per model attempt
+            retry_options=types.HttpRetryOptions(attempts=1),  # Don't retry a 503 on the same model 5 times
         ),
     )
 
 
+RETRYABLE_CODES = {429, 500, 502, 503, 504}
+
 def get_recommendations(title: str, artist: str) -> tuple[list[Recommendation], str]:
-    try:
-        client = _get_client(settings.GEMINI_API_KEY or "")
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=f"{title} by {artist}",
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                response_mime_type="application/json",
-                response_schema=GeminiResponse,
-            ),
-        )
-    except errors.APIError as exc:
-        if exc.code == 429:
-            raise GeminiRateLimitError("Gemini rate-limit hit lol.") from exc
-        raise GeminiServiceError(f"Gemini API error ({exc.code}).") from exc
-    except (httpx.HTTPError, TimeoutError, ConnectionError, OSError) as exc:
-        raise GeminiServiceError("Couldn't reach Gemini (network error or timeout).") from exc
+    client = _get_client(settings.GEMINI_API_KEY or "")
+    models_to_try = [settings.GEMINI_MODEL] + [m for m in FALLBACK_MODELS if m != settings.GEMINI_MODEL]
+    soft_errors = []
 
-    parsed = response.parsed
-    if not parsed or not parsed.recommendations:
+    for model_name in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=f"{title} by {artist}",
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                    response_mime_type="application/json",
+                    response_schema=GeminiResponse,
+                    thinking_config=types.ThinkingConfig(thinking_level="low"),
+                ),
+            )
+        except errors.APIError as exc:
+            if exc.code in RETRYABLE_CODES:
+                soft_errors.append(exc)
+                continue
+            raise GeminiServiceError(f"Gemini API error ({exc.code}).") from exc
+        except (httpx.TimeoutException, TimeoutError) as exc:  # must come before httpx.HTTPError
+            soft_errors.append(exc)
+            continue
+        except (httpx.HTTPError, ConnectionError, OSError) as exc:
+            raise GeminiServiceError("Couldn't reach Gemini (network error).") from exc
+
+        parsed = response.parsed
+        if parsed and parsed.recommendations:
+            return parsed.recommendations[:PICKS_REQUESTED], parsed.commentary.strip()
+
+    if not soft_errors:
         raise GeminiServiceError("Gemini returned no usable recommendations.")
-
-    return parsed.recommendations[:PICKS_REQUESTED], parsed.commentary.strip()
+    if all(isinstance(e, errors.APIError) and e.code == 429 for e in soft_errors):
+        raise GeminiRateLimitError("Gemini rate-limit hit lol.")
+    raise GeminiOverloadError("All Gemini models are overloaded. Wow.") from soft_errors[-1]

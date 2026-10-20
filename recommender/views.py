@@ -5,7 +5,7 @@ from django.db.models import F
 from django.shortcuts import render
 from django.views.decorators.vary import vary_on_headers
 from .catalog import CatalogError, search_candidates, song_key, verify_recommendation
-from .gemini_service import GeminiRateLimitError, GeminiServiceError, get_recommendations
+from .gemini_service import GeminiRateLimitError, GeminiServiceError, get_recommendations, GeminiOverloadError
 from .models import SearchQuery, TrackRecommendation
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,8 @@ def search(request):
                 context["error"] = "I couldn't verify any recommendations for that one. Try another song."
     except GeminiRateLimitError:
         context["error"] = "Lmao you got rate-limited, just hold on a little bit and try again."
+    except GeminiOverloadError:
+        context["error"] = "Google's AI servers are overloaded rn. Sorry bud, try again later."
     except (GeminiServiceError, CatalogError):
         logger.exception("External lookup failed")
         context["error"] = "Connection error. You might need to either turn on or off your VPN."
@@ -92,7 +94,7 @@ def _verify_batch(batch):
 
 
 def _verify_until_enough(track, recs):
-    seen = {song_key(track.title, track.artist)}  
+    seen = {song_key(track.title, track.artist)}
     verified = []
     failed = 0
 
@@ -112,9 +114,6 @@ def _verify_until_enough(track, recs):
                 continue
             seen.add(key)
             verified.append((rec, match))
-
-        if not verified and failed == len(batch):
-            break
 
     return verified[:SHOWN_COUNT], failed
 

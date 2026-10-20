@@ -3,10 +3,10 @@ import unicodedata
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from functools import lru_cache
-import httpx
+import requests
 
 ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
-ITUNES_TIMEOUT_SECONDS = 4
+ITUNES_TIMEOUT_SECONDS = 10
 TITLE_MATCH_THRESHOLD = 0.85
 SONG_KEY_MAX_LENGTH = 600
 
@@ -141,17 +141,16 @@ def _artists_match(want: str, got: str) -> bool:
 def _matches(rec_title: str, rec_artist: str, track: CatalogTrack) -> bool:
     return _artists_match(rec_artist, track.artist) and _titles_match(rec_title, track.title)
 
-_http_client = httpx.Client(timeout=ITUNES_TIMEOUT_SECONDS)
-
 def _search(term: str, limit: int) -> list[CatalogTrack]:
     try:
-        response = _http_client.get(
+        response = requests.get(
             ITUNES_SEARCH_URL,
             params={"term": term, "media": "music", "entity": "song", "limit": limit},
+            timeout=ITUNES_TIMEOUT_SECONDS,
         )
         response.raise_for_status()
         results = response.json().get("results", [])
-    except (httpx.HTTPError, ValueError, OSError) as exc:
+    except (requests.RequestException, ValueError, OSError) as exc:
         raise CatalogError(f"iTunes lookup failed: {exc}") from exc
 
     tracks = []
