@@ -52,6 +52,7 @@ python3 start.py
 ## Screenshots
 
 **SMR itself**
+
 <img width="827" height="895" alt="image" src="https://github.com/user-attachments/assets/30a8846e-2b08-47ce-bcec-b7fa9a7966f4" />
 
 
