@@ -18,30 +18,18 @@ def index(request):
 
 
 def _wants_fragment(request):
-    """Return True for a normal htmx request (swap just the results).
-
-    When htmx restores a page after Back/Forward it also sends HX-Request,
-    but it expects the full page back, so those requests are excluded.
-    """
     is_htmx = bool(request.headers.get("HX-Request"))
     is_history_restore = bool(request.headers.get("HX-History-Restore-Request"))
     return is_htmx and not is_history_restore
 
 
 def _select_candidate(candidates, pick_id):
-    """Return the candidate matching pick_id, or the top search result by default.
-
-    Compares IDs as strings so non-numeric user input in the query string
-    can never raise a ValueError.
-    """
     for candidate in candidates:
         if str(candidate.catalog_id) == pick_id:
             return candidate
     return candidates[0]
 
 
-# The same URL returns a fragment or a full page depending on these headers,
-# so tell browsers and proxies not to reuse one for the other.
 @vary_on_headers("HX-Request", "HX-History-Restore-Request")
 def search(request):
     q = request.GET.get("q", "").strip()[:200]
@@ -78,7 +66,6 @@ def search(request):
 
 
 def _alternatives(candidates, chosen, max_items=5):
-    """Other songs the user might have meant, minus re-releases of the chosen one."""
     seen = {song_key(chosen.title, chosen.artist)}
     alts = []
     for candidate in candidates:
@@ -91,11 +78,6 @@ def _alternatives(candidates, chosen, max_items=5):
 
 
 def _safe_verify(rec):
-    """Look up one recommendation in iTunes. Returns (rec, match, lookup_ok).
-
-    lookup_ok is False when the HTTP request itself failed (network error,
-    rate limit), as opposed to the lookup succeeding but finding no match.
-    """
     try:
         match = verify_recommendation(rec.title, rec.artist)
         return rec, match, True
@@ -105,20 +87,12 @@ def _safe_verify(rec):
 
 
 def _verify_batch(batch):
-    """Look up a batch of recommendations in iTunes concurrently, keeping their order."""
     with ThreadPoolExecutor(max_workers=SHOWN_COUNT) as pool:
         return list(pool.map(_safe_verify, batch))
 
 
 def _verify_until_enough(track, recs):
-    """Verify Gemini's picks, closest first, until SHOWN_COUNT have passed.
-
-    Picks are checked in batches of SHOWN_COUNT, so the backup picks only cost
-    extra iTunes calls when some of the first batch don't verify.
-    Returns (verified, failed): a list of (recommendation, catalog match) and
-    the number of lookups that errored out.
-    """
-    seen = {song_key(track.title, track.artist)}  # never recommend the searched song
+    seen = {song_key(track.title, track.artist)}  
     verified = []
     failed = 0
 
@@ -139,8 +113,6 @@ def _verify_until_enough(track, recs):
             seen.add(key)
             verified.append((rec, match))
 
-        # If every lookup in the first batch failed with a network error,
-        # iTunes is unreachable—don't waste time trying the next batch.
         if not verified and failed == len(batch):
             break
 
@@ -148,16 +120,6 @@ def _verify_until_enough(track, recs):
 
 
 def _get_results(track):
-    """Cache-first. Returns (recommendations_list, commentary_str).
-
-    The cache is keyed by song (title + artist), not by iTunes track id, so the
-    single, the album cut and the remaster of one song share one entry and one
-    Gemini call.
-
-    Results are only saved when every lookup worked and enough songs verified.
-    Otherwise they are shown once and the next search for this song tries again,
-    instead of a thin or error-damaged list being served forever.
-    """
     key = song_key(track.title, track.artist)
     cached = SearchQuery.objects.filter(song_key=key).first()
     if cached and cached.commentary:
@@ -169,8 +131,6 @@ def _get_results(track):
 
     if not verified:
         if failed:
-            # Nothing verified and some lookups errored: iTunes is the problem,
-            # not Gemini's picks. Say so instead of "couldn't verify anything".
             raise CatalogError(f"{failed} iTunes lookups failed and none succeeded. Brutal.")
         return [], ""
 
@@ -189,11 +149,10 @@ def _get_results(track):
         )
 
     if failed or len(rows) < MIN_TO_CACHE:
-        return rows, commentary  # show them, but don't cache
+        return rows, commentary  
 
     with transaction.atomic():
         if cached:
-            # Replace any old cache entry saved before the commentary field existed.
             cached.delete()
         search_obj, created = SearchQuery.objects.get_or_create(
             song_key=key,

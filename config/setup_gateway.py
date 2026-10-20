@@ -63,8 +63,6 @@ class SetupGatewayMiddleware:
         return self.get_response(request)
 
     def process_view(self, request, view_func, view_args, view_kwargs):
-        # We use process_view instead of __call__ so Django's CsrfViewMiddleware
-        # validates the POST token before this code runs.
         if settings.GEMINI_API_KEY:
             return None
 

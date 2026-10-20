@@ -7,9 +7,7 @@ import httpx
 
 ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
 ITUNES_TIMEOUT_SECONDS = 4
-
 TITLE_MATCH_THRESHOLD = 0.85
-# Keep in sync with SearchQuery.song_key's max_length in models.py.
 SONG_KEY_MAX_LENGTH = 600
 
 
@@ -28,25 +26,13 @@ class CatalogTrack:
     link: str
 
 
-# --------------------------------------------------------------------------
-# Normalization
-# --------------------------------------------------------------------------
-
-# Latin letters that don't decompose into "base letter + accent" via NFKD.
 _LATIN_FOLDS = str.maketrans(
     {"ø": "o", "ł": "l", "đ": "d", "ı": "i", "æ": "ae", "œ": "oe"}
 )
-# Matches ASCII hyphen, Unicode hyphens/dashes (U+2010..U+2015), and minus sign (U+2212).
 _DASHES = re.compile(r"[-\u2010-\u2015\u2212]")
 
 
 def _strip_latin_accents(text: str) -> str:
-    """Turn 'Beyoncé' into 'Beyonce', while leaving non-Latin scripts untouched.
-
-    Decomposes the text, then drops combining marks only when they sit on a
-    Latin base letter. Marks on Devanagari, Thai, Hangul, kana, Cyrillic
-    (й = и + breve) and so on are part of the letter and are kept.
-    """
     if text.isascii():
         return text
 
@@ -64,13 +50,10 @@ def _strip_latin_accents(text: str) -> str:
 
 
 def _normalize(text: str) -> str:
-    """Return a simplified lowercase string for fuzzy title and artist comparisons."""
     text = _strip_latin_accents(text.casefold()).translate(_LATIN_FOLDS)
     text = text.replace("&", " and ").replace("+", " and ")
     text = _DASHES.sub(" ", text)
 
-    # Keep whitespace and characters in Unicode categories:
-    # L (Letters), N (Numbers), and M (combining Marks needed by non-Latin scripts).
     kept_chars = []
     for ch in text:
         category = unicodedata.category(ch)[0]
@@ -80,11 +63,6 @@ def _normalize(text: str) -> str:
     return " ".join("".join(kept_chars).split())
 
 
-# --------------------------------------------------------------------------
-# Titles: ignore "(feat. X)", "- Remastered 2011" and similar release noise
-# --------------------------------------------------------------------------
-
-# Tags that describe the release, not the song.
 _VERSION_NOISE = re.compile(
     r"\b(?:"
     r"feat|featuring|ft|"
@@ -98,7 +76,6 @@ _VERSION_NOISE = re.compile(
 _BRACKETED = re.compile(r"\s*[(\[][^()\[\]]*[)\]]")
 _DASH_SPLIT = re.compile(r"\s+[-–—]\s+")
 
-# Words that indicate a different recording altogether rather than release metadata.
 _ALT_RECORDING = re.compile(
     r"\b(?:live|remix|rmx|acoustic|demo|instrumental|karaoke)\b",
     re.IGNORECASE,
@@ -106,7 +83,6 @@ _ALT_RECORDING = re.compile(
 
 
 def _remove_bracket_if_noise(match: re.Match) -> str:
-    """Drop a '(...)' or '[...]' section only if it contains release noise."""
     text = match.group(0)
     if _VERSION_NOISE.search(text):
         return ""
@@ -114,7 +90,7 @@ def _remove_bracket_if_noise(match: re.Match) -> str:
 
 
 def _strip_version_noise(title: str) -> str:
-    title = unicodedata.normalize("NFKC", title)  # full-width brackets -> ASCII
+    title = unicodedata.normalize("NFKC", title) 
     title = _BRACKETED.sub(_remove_bracket_if_noise, title)
 
     parts = _DASH_SPLIT.split(title)
@@ -125,14 +101,6 @@ def _strip_version_noise(title: str) -> str:
 
 @lru_cache(maxsize=4096)
 def _title_forms(title: str) -> tuple[str, str]:
-    """Return (full, bare) normalized comparison forms of a song title.
-
-    full: release noise removed, everything else kept.
-    bare: additionally drops every (...) / [...] group, so
-          "(I Can't Get No) Satisfaction" still equals "Satisfaction" and
-          "Rocket Man (I Think It's Going to Be a Long Long Time)" equals
-          "Rocket Man".
-    """
     stripped = _strip_version_noise(title)
     full = _normalize(stripped) or _normalize(title)
     bare = _normalize(_BRACKETED.sub("", stripped))
@@ -167,19 +135,11 @@ def _artists_match(want: str, got: str) -> bool:
         return False
     if w == g or w.replace(" ", "") == g.replace(" ", ""):
         return True
-    # Whole-word containment, so "Prince" matches "Prince and the Revolution"
-    # and "Daft Punk" matches "Daft Punk & Pharrell Williams", but "Air" no
-    # longer matches "Chairlift".
     return f" {w} " in f" {g} " or f" {g} " in f" {w} "
 
 
 def _matches(rec_title: str, rec_artist: str, track: CatalogTrack) -> bool:
     return _artists_match(rec_artist, track.artist) and _titles_match(rec_title, track.title)
-
-
-# --------------------------------------------------------------------------
-# iTunes lookups
-# --------------------------------------------------------------------------
 
 _http_client = httpx.Client(timeout=ITUNES_TIMEOUT_SECONDS)
 
@@ -214,7 +174,6 @@ def _search(term: str, limit: int) -> list[CatalogTrack]:
 
 
 def search_candidates(query: str, limit: int = 5) -> list[CatalogTrack]:
-    """Top matches for what the user typed (feeds the 'Wrong song?' button)."""
     query = query.strip()
     if not query:
         return []
@@ -222,7 +181,6 @@ def search_candidates(query: str, limit: int = 5) -> list[CatalogTrack]:
 
 
 def verify_recommendation(title: str, artist: str) -> CatalogTrack | None:
-    """Find the catalog track that best matches a Gemini recommendation, or None."""
     best = None
     best_score = 0.0
     for track in _search(f"{title} {artist}", limit=10):
@@ -236,14 +194,5 @@ def verify_recommendation(title: str, artist: str) -> CatalogTrack | None:
 
 
 def song_key(title: str, artist: str) -> str:
-    """Identity of a song across releases. Used for the cache and for de-duplicating.
-
-    "Reckoner", "Reckoner - Remastered" and "Reckoner (feat. Someone)" by the
-    same artist all produce the same key, whether they come from a single, an
-    album or a reissue.
-
-    Saved keys depend on how this function normalizes: if you change the rules
-    later, old cache rows stop matching (they are simply regenerated).
-    """
     full, _bare = _title_forms(title)
     return f"{full}|{_normalize(artist)}"[:SONG_KEY_MAX_LENGTH]

@@ -3,12 +3,7 @@ from urllib.parse import quote
 from django.conf import settings
 
 class SearchQuery(models.Model):
-    # Identity of the searched song, from catalog.song_key(). One row per song,
-    # however many releases (single, album, remaster) it appears on, so the
-    # same song never costs a second Gemini call.
     song_key = models.CharField(max_length=600, unique=True)
-    # The release the song was first searched under. Not unique: the same
-    # song can reach us through several catalog ids.
     catalog_id = models.BigIntegerField()
     title = models.CharField(max_length=255)
     artist = models.CharField(max_length=255)
@@ -23,9 +18,7 @@ class SearchQuery(models.Model):
 
 
 class TrackRecommendation(models.Model):
-    search_query = models.ForeignKey(
-        SearchQuery, on_delete=models.CASCADE, related_name="recommendations"
-    )
+    search_query = models.ForeignKey(SearchQuery, on_delete=models.CASCADE, related_name="recommendations")
     catalog_id = models.BigIntegerField()
     title = models.CharField(max_length=255)
     artist = models.CharField(max_length=255)

@@ -1,17 +1,12 @@
 from functools import lru_cache
-
 import httpx
 from django.conf import settings
 from google import genai
 from google.genai import errors, types
 from pydantic import BaseModel, Field
 
-# We ask for more songs than we show. The view keeps the first 5 that can be
-# verified in iTunes, so a hallucinated title or a spelling mismatch doesn't
-# leave the user (or the cache) with a short list.
 PICKS_REQUESTED = 8
-REQUEST_TIMEOUT_MS = 30_000  # google-genai takes milliseconds
-
+REQUEST_TIMEOUT_MS = 30_000  
 
 class Recommendation(BaseModel):
     title: str
@@ -27,14 +22,13 @@ class GeminiResponse(BaseModel):
 
 
 class GeminiServiceError(Exception):
-    """Raised when we can't get usable recommendations out of Gemini."""
+    """Raised when the iTunes Search API can't be reached or misbehaves."""
 
 
 class GeminiRateLimitError(GeminiServiceError):
-    """Raised when the free-tier quota is hit (HTTP 429)."""
+    """Raised when the iTunes Search API can't be reached or misbehaves."""
 
 
-# Keep the number in "Recommend 8 songs" in sync with PICKS_REQUESTED.
 SYSTEM_PROMPT = """
 Pretend you are the most opinionated musically-literate AI music recommender. You have heard everything, you forget nothing, and you treat recommending music as a blood sport.
 
@@ -79,8 +73,6 @@ A closing short paragraph (3 to 4 sentences) where you turn to the user and brut
 def _get_client(api_key: str) -> genai.Client:
     if not api_key:
         raise GeminiServiceError("GEMINI_API_KEY is missing. Check your .env file.")
-    # Custom connect=3.5s timeout so an offline/geo-blocked connection fails fast
-    # instead of getting trapped in the Google SDK's internal retry loop.
     return genai.Client(
         api_key=api_key,
         http_options=types.HttpOptions(
