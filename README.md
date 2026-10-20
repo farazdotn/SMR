@@ -5,7 +5,7 @@
 ### **S**nobbery **M**usic **R**ecommender
 
 Give it your fav songs, and it'll recommend you five other songs based on them<br>
-(after psychoanalyzing you and shitting on your music taste ofc.)
+(after psychoanalyzing you and roasting your taste ofc.)
 
 ![Django](https://img.shields.io/badge/Django-6-092E20?logo=django&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
@@ -25,6 +25,7 @@ Built this because I wanted a funny music recommender that also let me hear the 
 - **Actually funny.** Lowkey brutal sometimes
 
 ## How to run it
+If you're in iran you need a good vpn.
 
 ### Windows (one-click)
 
