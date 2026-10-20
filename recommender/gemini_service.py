@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 # leave the user (or the cache) with a short list.
 PICKS_REQUESTED = 8
 REQUEST_TIMEOUT_MS = 30_000  # google-genai takes milliseconds
-GEMINI_PING_URL = "https://generativelanguage.googleapis.com"
 
 
 class Recommendation(BaseModel):
@@ -80,6 +79,8 @@ A closing short paragraph (3 to 4 sentences) where you turn to the user and brut
 def _get_client(api_key: str) -> genai.Client:
     if not api_key:
         raise GeminiServiceError("GEMINI_API_KEY is missing. Check your .env file.")
+    # Custom connect=3.5s timeout so an offline/geo-blocked connection fails fast
+    # instead of getting trapped in the Google SDK's internal retry loop.
     return genai.Client(
         api_key=api_key,
         http_options=types.HttpOptions(
@@ -91,8 +92,6 @@ def _get_client(api_key: str) -> genai.Client:
 
 def get_recommendations(title: str, artist: str) -> tuple[list[Recommendation], str]:
     try:
-        # Fast reachability check so an offline connection fails in 3s instead of
-        # getting trapped in the Google SDK's internal retry loop.
         client = _get_client(settings.GEMINI_API_KEY or "")
         response = client.models.generate_content(
             model=settings.GEMINI_MODEL,

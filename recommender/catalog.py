@@ -6,7 +6,7 @@ from functools import lru_cache
 import httpx
 
 ITUNES_SEARCH_URL = "https://itunes.apple.com/search"
-ITUNES_TIMEOUT_SECONDS = 10
+ITUNES_TIMEOUT_SECONDS = 4
 
 TITLE_MATCH_THRESHOLD = 0.85
 # Keep in sync with SearchQuery.song_key's max_length in models.py.
@@ -181,7 +181,7 @@ def _matches(rec_title: str, rec_artist: str, track: CatalogTrack) -> bool:
 # iTunes lookups
 # --------------------------------------------------------------------------
 
-_http_client = httpx.Client(timeout=4.0)
+_http_client = httpx.Client(timeout=ITUNES_TIMEOUT_SECONDS)
 
 def _search(term: str, limit: int) -> list[CatalogTrack]:
     try:
