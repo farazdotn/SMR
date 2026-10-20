@@ -2,7 +2,7 @@
   <div class="searched">
     {% if chosen.artwork_url %}<img src="{{ chosen.artwork_url }}" alt="">{% endif %}
     <div>
-      <p>Showing results for <strong>{{ chosen.title }}</strong> by {{ chosen.artist }}</p>
+      <p>Showing recommendation for <strong>{{ chosen.title }}</strong> by {{ chosen.artist }}</p>
     </div>
   </div>
   {% if alternatives %}
@@ -56,5 +56,5 @@
     </article>
   {% endfor %}
 {% else %}
-  <p class="empty">Nothing here yet. Type a song and prepare to be corrected.</p>
+  <p class="empty">Come on now, i'm sure you have great taste...</p>
 {% endif %}

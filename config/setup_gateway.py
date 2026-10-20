@@ -6,12 +6,12 @@ from dotenv import set_key
 from google import genai
 from google.genai import errors, types
 
-VPN_MESSAGE = "Connection error — you might need to either turn on or off your VPN."
+VPN_MESSAGE = "Connection error. You might need to either turn on or off your VPN."
 PING_URL = "https://generativelanguage.googleapis.com/v1beta/models?key=ping"
 
 
 def _check_gemini_reachable() -> str | None:
-    """Return a gentle warning if Gemini is unreachable or geo-blocked, else None."""
+    """Return a warning if Gemini is unreachable or geo-blocked, else None."""
     try:
         resp = httpx.get(PING_URL, timeout=3.5)
         if "location" in resp.text.lower() or resp.status_code == 403:

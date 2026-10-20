@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crate Digger</title>
+  <title>SMR</title>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <style>
     :root { color-scheme: dark; }
     body { font-family: system-ui, sans-serif; background: #111; color: #eee; max-width: 640px; margin: 0 auto; padding: 2rem 1rem; }
-    h1 { margin-bottom: .25rem; }
-    .tagline { color: #999; margin-top: 0; }
+    h1 { font-size: 2.2rem; letter-spacing: .08em; margin: 0; line-height: 1.1; }
+    .subtitle { margin: .25rem 0 .75rem; font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: #777; }
+    .subtitle b { color: #e8b84a; font-weight: 700; }
+    .tagline { color: #aaa; margin: 0; }
     form { display: flex; gap: .5rem; margin: 1.5rem 0; }
     input[type=text] { flex: 1; padding: .7rem; border-radius: 8px; border: 1px solid #333; background: #1c1c1c; color: inherit; font-size: 1rem; }
     button { padding: .7rem 1.2rem; border: 0; border-radius: 8px; background: #e8b84a; color: #111; font-weight: 600; cursor: pointer; }
@@ -54,25 +56,32 @@
     .player.broken { opacity: .45; pointer-events: none; }
     .commentary { margin-top: 1.25rem; padding: 1rem 1.25rem; background: #1c1c1c; border-left: 3px solid #e8b84a; border-radius: 0 12px 12px 0; color: #ddd; line-height: 1.55; animation: rise .5s ease both; animation-delay: calc(var(--i, 0) * 120ms); }
     .commentary p { margin: 0; }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #222; color: #666; font-size: .85rem; text-align: center; }
+    footer a { color: #999; text-decoration: none; }
+    footer a:hover { color: #e8b84a; }
   </style>
 </head>
 <body>
-  <h1>Crate Digger</h1>
-  <p class="tagline">Tell us a song. We'll tell you what you should've been listening to.</p>
+  <h1 style="color: #e8b84a;">SMR</h1>
+  <p class="subtitle"><b>S</b>nobbery <b>M</b>usic <b>R</b>ecommender</p>
+  <p class="tagline">Tell me a song. I'll tell you more songs like it.</p>
 
   <form hx-get="{% url 'search' %}" hx-target="#results" hx-indicator="#spinner" hx-push-url="true" hx-disabled-elt="find button">
-    <input type="text" name="q" value="{{ q }}" placeholder="Song and artist, e.g. Reckoner Radiohead" required autofocus>
-    <button type="submit">Judge me</button>
+    <input type="text" name="q" value="{{ q }}" placeholder="Song and artist, e.g. Reckoner by Radiohead" required autofocus>
+    <button type="submit">Let's go</button>
   </form>
 
   <div id="spinner" class="htmx-indicator">
     <span class="spinner"></span>
-    <span>Consulting the crate-diggers…</span>
+    <span>Digging through my vinyls…</span>
   </div>
 
   <main id="results">
     {% include "_results.html" %}
   </main>
+
+  <footer>Made by <a href="https://github.com/farazdotn" target="_blank" rel="noopener noreferrer">Faraz</a></footer>
+
 <script>
   const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 

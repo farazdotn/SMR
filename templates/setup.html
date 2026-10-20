@@ -7,7 +7,9 @@
   <style>
     :root { color-scheme: dark; }
     body { font-family: system-ui, sans-serif; background: #111; color: #eee; max-width: 640px; margin: 0 auto; padding: 2rem 1rem; }
-    h1 { margin-bottom: .25rem; }
+    h1 { font-size: 2.2rem; letter-spacing: .08em; margin: 0; line-height: 1.1; }
+    .subtitle { margin: .25rem 0 .75rem; font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: #777; }
+    .subtitle b { color: #e8b84a; font-weight: 700; }
     .tagline { color: #999; margin-top: 0; }
     .card { background: #1c1c1c; padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem; }
     .card h2 { margin-top: 0; font-size: 1.15rem; }
@@ -23,8 +25,9 @@
   </style>
 </head>
 <body>
-  <h1>Crate Digger</h1>
-  <p class="tagline">Tell us a song. We'll tell you what you should've been listening to.</p>
+ <h1 style="color: #e8b84a;">SMR</h1>
+  <p class="subtitle"><b>S</b>nobbery <b>M</b>usic <b>R</b>ecommender</p>
+  <p class="tagline">Tell me a song. I'll tell you more songs like it.</p>
 
   <section class="card">
     <h2>One-time setup: Enter your Gemini API Key</h2>
@@ -44,9 +47,9 @@
     {% endif %}
 
     <ol class="steps">
-      <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> and sign in with your Google account.</li>
-      <li>Click <strong>Create API key</strong> and copy it (it's free).</li>
-      <li>Paste it above. It'll be verified and saved to your local <code>.env</code> file so you never have to enter it again.</li>
+      <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a> and sign in with your Google account (dw it'll take 5 seconds).</li>
+      <li>Click <strong>Create API key</strong> and copy it.</li>
+      <li>Paste it above. That's it.</li>
     </ol>
   </section>
 </body>

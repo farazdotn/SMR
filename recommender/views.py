@@ -45,7 +45,7 @@ def search(request):
     context = {"q": q}
 
     if not q:
-        context["error"] = "Type a song first. I can judge your taste, not your silence."
+        context["error"] = "Type a song first dude."
         return render(request, template, context)
 
     try:
@@ -68,10 +68,10 @@ def search(request):
             else:
                 context["error"] = "I couldn't verify any recommendations for that one. Try another song."
     except GeminiRateLimitError:
-        context["error"] = "The robot musicologist needs a break. Try again in a minute."
+        context["error"] = "Lmao you got rate-limited, just hold on a little bit and try again."
     except (GeminiServiceError, CatalogError):
         logger.exception("External lookup failed")
-        context["error"] = "Connection error — you might need to either turn on or off your VPN."
+        context["error"] = "Connection error. You might need to either turn on or off your VPN."
 
     return render(request, template, context)
 
@@ -98,7 +98,7 @@ def _safe_verify(rec):
     try:
         return verify_recommendation(rec.title, rec.artist), True
     except CatalogError:
-        logger.warning("iTunes lookup failed while verifying %r by %r", rec.title, rec.artist)
+        logger.warning("iTunes lookup lowk failed while verifying %r by %r", rec.title, rec.artist)
         return None, False
 
 
@@ -165,7 +165,7 @@ def _get_results(track):
         if failed:
             # Nothing verified and some lookups errored: iTunes is the problem,
             # not Gemini's picks. Say so instead of "couldn't verify anything".
-            raise CatalogError(f"{failed} iTunes lookups failed and none succeeded.")
+            raise CatalogError(f"{failed} iTunes lookups failed and none succeeded. Brutal.")
         return [], ""
 
     rows = [

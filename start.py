@@ -76,10 +76,10 @@ def wait_until_ready(server_proc) -> bool:
 def main():
     os.chdir(ROOT)
     if os.name == "nt":
-        os.system("title Crate Digger")
+        os.system("title SMR")
 
     clear_screen()
-    print("\n  Starting Crate Digger, hang tight...\n")
+    print("\n  Starting SMR, hang tight...\n")
     free_port_if_stuck()
     ensure_venv_and_deps()
     py = str(venv_python())
@@ -100,7 +100,7 @@ def main():
     webbrowser.open(URL)
     clear_screen()
     print("  ========================================================")
-    print("    CRATE DIGGER IS RUNNING!")
+    print("    SMR IS RUNNING!")
     print("  ========================================================")
     print()
     print("    The app is open in your web browser.")
@@ -113,7 +113,7 @@ def main():
     try:
         input("\n  Press [ENTER] at any time to stop the server and close... ")
     finally:
-        print("\n  Shutting down Crate Digger... See ya!")
+        print("\n  Shutting down SMR... Cya!")
         server.terminate()
         try:
             server.wait(timeout=5)
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n  Shutting down Crate Digger... See ya!")
+        print("\n  Shutting down SMR... Cya!")
     except Exception as exc:
         print(f"\n  Something went wrong:\n  {exc}")
         input("\n  Press [ENTER] to close this window...")
