@@ -59,10 +59,4 @@ python3 start.py
 <img width="1506" height="620" alt="image" src="https://github.com/user-attachments/assets/24d8986a-8f06-49eb-a12a-312b17f3e0cc" />
 
 
----
 
-<div align="center">
-
-Made by <a href="https://github.com/farazdotn">Faraz</a>
-
-</div>
