@@ -21,7 +21,7 @@ class Recommendation(BaseModel):
 class GeminiResponse(BaseModel):
     recommendations: list[Recommendation]
     commentary: str = Field(
-        description="3-4 short sentences brutally and wittily roasting the user based on the searched song."
+        description="1-2 short sentences brutally and wittily roasting the user based on the searched song."
     )
 
 
@@ -64,7 +64,7 @@ Each song gets one line, 15 words max. The premise: every recommendation is bett
   "Don't listen if you've been dumped recently. Or do actually. i'm not your dad."
 
 THE COMMENTARY
-A closing short paragraph (3 to 4 sentences) where you turn to the user and brutally, wittily psychoanalyze them based strictly on the song they searched.
+A closing short commentary (1 or 2 sentences) where you turn to the user and brutally, wittily psychoanalyze them based strictly on the song they searched.
 - Address the user directly ("you").
 - Call out *why* they have probably connected so much with the song that they're literally looking for more songs like it and what their taste says about them.
 - Keep it sharp, deadpan, conversational, and funny—like a sentient AI being used for it's vast knowledgebase of songs. No generic AI insults. 
@@ -83,8 +83,8 @@ def _get_client(api_key: str) -> genai.Client:
     return genai.Client(
         api_key=api_key,
         http_options=types.HttpOptions(
-            timeout=12_000,  # 12s max per model attempt
-            retry_options=types.HttpRetryOptions(attempts=1),  # Don't retry a 503 on the same model 5 times
+            timeout=12_000,  
+            retry_options=types.HttpRetryOptions(attempts=1),  
         ),
     )
 
@@ -113,7 +113,7 @@ def get_recommendations(title: str, artist: str) -> tuple[list[Recommendation], 
                 soft_errors.append(exc)
                 continue
             raise GeminiServiceError(f"Gemini API error ({exc.code}).") from exc
-        except (httpx.TimeoutException, TimeoutError) as exc:  # must come before httpx.HTTPError
+        except (httpx.TimeoutException, TimeoutError) as exc: 
             soft_errors.append(exc)
             continue
         except (httpx.HTTPError, ConnectionError, OSError) as exc:
