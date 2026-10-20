@@ -16,7 +16,7 @@ Give it your fav songs, and it'll recommend you five other songs based on them<b
 
 ---
 
-Built this because I wanted a funny music recommender that also let me hear the tracks immediately and download 'em in my Telegram bot instantly.
+Built this because I wanted a funny music recommender that also let me hear the tracks immediately and download 'em in my telegram bot.
 
 ## What you get per search
 
