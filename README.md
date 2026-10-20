@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎧 SMR
+#🎧 SMR
 
 ### **S**nobbery **M**usic **R**ecommender
 
@@ -52,13 +52,14 @@ python3 start.py
 
 ## Screenshots
 
+**SMR itself**
+<img width="827" height="895" alt="image" src="https://github.com/user-attachments/assets/30a8846e-2b08-47ce-bcec-b7fa9a7966f4" />
+
+
 **Setup page**
 
-[image]
+<img width="1506" height="620" alt="image" src="https://github.com/user-attachments/assets/24d8986a-8f06-49eb-a12a-312b17f3e0cc" />
 
-**SMR itself**
-
-[image]
 
 ---
 
