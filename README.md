@@ -1,6 +1,6 @@
 <div align="center">
 
-#🎧 SMR
+# 🎧 SMR
 
 ### **S**nobbery **M**usic **R**ecommender
 
