@@ -20,9 +20,9 @@ Built this because I wanted a funny music recommender that also let me hear the 
 
 ## What you get per search
 
-- **5 sonic matches**, each with a 30-second audio preview and instant links to Apple Music, Spotify, YouTube, SoundCloud, and a music-downloading Telegram bot.
-- **Zero AI hallucinations.** Every recommendation is verified in parallel against the iTunes Search API.
-- **Actually funny.** Lowkey brutal sometimes.
+- **5 sonic matches**, each with a 30-second audio preview and instant links to Apple Music, Spotify, YouTube, SoundCloud, and a music-downloading telegram bot.
+- **Zero AI hallucinations.** Every recommendation is verified in parallel against the itunes search API.
+- **Actually funny.** Lowkey brutal sometimes
 
 ## How to run it
 
@@ -30,10 +30,8 @@ Built this because I wanted a funny music recommender that also let me hear the 
 
 1. Double-click **`start.bat`**.
 2. It automatically installs Python (if you don't have it), sets up a local `.venv`, installs the dependencies, preps the SQLite database, and pops open your browser.
-3. On first launch, it'll ask you to paste a free Google Gemini API key.
+3. On first launch, it'll ask you to paste a free Google Gemini API key. (Getting a key takes about 5 seconds, and the setup page walks you through it, dw.)
 
-> [!TIP]
-> Getting a key takes about 5 seconds, and the setup page walks you through it, dw.
 
 ### macOS / Linux
 
