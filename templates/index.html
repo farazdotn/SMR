@@ -95,14 +95,10 @@
     player.querySelector(".time").textContent = fmt(audio.currentTime > 0 ? audio.currentTime : duration);
   }
 
-  // Media events don't bubble, so we listen in the capture phase on document.
-  // That keeps working after HTMX swaps in new results.
   ["play", "pause", "timeupdate", "loadedmetadata"].forEach((type) =>
     document.addEventListener(type, (e) => e.target instanceof HTMLAudioElement && render(e.target), true)
   );
 
-  // Only one clip at a time. Pausing the others fires their "pause" event,
-  // which flips their buttons back to ▶ automatically.
   document.addEventListener("play", (e) => {
     document.querySelectorAll("audio").forEach((a) => { if (a !== e.target) a.pause(); });
   }, true);
@@ -111,7 +107,6 @@
     if (e.target instanceof HTMLAudioElement) { e.target.currentTime = 0; render(e.target); }
   }, true);
 
-  // Expired or dead preview URLs: grey the player out instead of leaving a dead button.
   document.addEventListener("error", (e) => {
     if (!(e.target instanceof HTMLAudioElement)) return;
     const player = e.target.closest(".player");

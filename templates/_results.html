@@ -1,6 +1,8 @@
 {% if chosen %}
   <div class="searched">
-    {% if chosen.artwork_url %}<img src="{{ chosen.artwork_url }}" alt="">{% endif %}
+    {% if chosen.artwork_url %}
+    <img src="{{ chosen.artwork_url }}" alt="">
+    {% endif %}
     <div>
       <p>Showing recommendation for <strong>{{ chosen.title }}</strong> by {{ chosen.artist }}</p>
     </div>
@@ -14,7 +16,9 @@
             <a href="{% url 'search' %}?q={{ q|urlencode:'' }}&amp;pick={{ alt.catalog_id }}"
                hx-get="{% url 'search' %}?q={{ q|urlencode:'' }}&amp;pick={{ alt.catalog_id }}"
                hx-target="#results" hx-indicator="#spinner" hx-push-url="true">
-              {% if alt.artwork_url %}<img src="{{ alt.artwork_url }}" alt="">{% endif %}
+              {% if alt.artwork_url %}
+              <img src="{{ alt.artwork_url }}" alt="">
+              {% endif %}
               <span><strong>{{ alt.title }}</strong> by {{ alt.artist }}<br><small>{{ alt.album }}</small></span>
             </a>
           </li>
@@ -35,7 +39,9 @@
   <br>
   {% for r in recommendations %}
     <article class="card" style="--i: {{ forloop.counter0 }}">
-      {% if r.artwork_url %}<img src="{{ r.artwork_url }}" alt="">{% endif %}
+      {% if r.artwork_url %}
+      <img src="{{ r.artwork_url }}" alt="">
+      {% endif %}
       <div>
         <h3>{{ r.title }}</h3>
         <p class="artist">{{ r.artist }}</p>
@@ -44,7 +50,9 @@
                 {% include "_player.html" with url=r.preview_url %}
                 {% endif %}
         <p class="links">
-          {% if r.link %}<a href="{{ r.link }}" target="_blank" rel="noopener noreferrer">Apple Music</a>{% endif %}
+          {% if r.link %}
+          <a href="{{ r.link }}" target="_blank" rel="noopener noreferrer">Apple Music</a>
+          {% endif %}
           <a href="https://open.spotify.com/search/{{ r.search_term|urlencode:'' }}" target="_blank" rel="noopener noreferrer">Spotify</a>
           <a href="https://www.youtube.com/results?search_query={{ r.search_term|urlencode:'' }}" target="_blank" rel="noopener noreferrer">YouTube</a>
           <a href="https://soundcloud.com/search/sounds?q={{ r.search_term|urlencode:'' }}" target="_blank" rel="noopener noreferrer">SoundCloud</a>

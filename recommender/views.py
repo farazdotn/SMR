@@ -1,24 +1,17 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
-
 from django.db import transaction
 from django.db.models import F
 from django.shortcuts import render
 from django.views.decorators.vary import vary_on_headers
-
 from .catalog import CatalogError, search_candidates, song_key, verify_recommendation
-from .gemini_service import (
-    GeminiRateLimitError,
-    GeminiServiceError,
-    get_recommendations,
-)
+from .gemini_service import GeminiRateLimitError, GeminiServiceError, get_recommendations
 from .models import SearchQuery, TrackRecommendation
 
 logger = logging.getLogger(__name__)
 
-SHOWN_COUNT = 5   # how many recommendations the user sees
-MIN_TO_CACHE = 3  # results thinner than this are shown but never saved
-
+SHOWN_COUNT = 5   
+MIN_TO_CACHE = 3  
 
 def index(request):
     return render(request, "index.html")

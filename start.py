@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""One-click bootstrapper: creates .venv, installs deps, migrates DB, opens browser, runs server."""
 import hashlib
 import os
 import socket

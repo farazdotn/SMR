@@ -12,13 +12,11 @@ NETWORK_ERRORS = (httpx.HTTPError, TimeoutError, ConnectionError, OSError)
 
 
 def _is_location_blocked(message: str) -> bool:
-    """Check if Google's error response indicates a regional/geo-IP restriction."""
     text = message.lower()
     return "location" in text or "region" in text or "country" in text
 
 
 def _check_gemini_reachable() -> str | None:
-    """Return a warning message if Gemini is unreachable or geo-blocked, else None."""
     try:
         response = httpx.get(PING_URL, timeout=3.5)
         if _is_location_blocked(response.text) or response.status_code == 403:
@@ -29,10 +27,7 @@ def _check_gemini_reachable() -> str | None:
 
 
 def _verify_api_key(api_key: str) -> None:
-    """Confirm Google accepts the API key before saving it (uses zero quota)."""
     try:
-        # Fast pre-check so an offline connection fails in 3s instead of
-        # getting stuck in the Google SDK's internal retry loop.
         httpx.get(PING_URL, timeout=3)
         client = genai.Client(
             api_key=api_key,
@@ -52,7 +47,6 @@ def _verify_api_key(api_key: str) -> None:
 
 
 def _save_api_key(api_key: str) -> None:
-    """Write the API key to the local .env file and load it into the current process."""
     env_path = settings.BASE_DIR / ".env"
     env_path.touch(exist_ok=True)
     set_key(str(env_path), "GEMINI_API_KEY", api_key)
@@ -61,7 +55,6 @@ def _save_api_key(api_key: str) -> None:
 
 
 class SetupGatewayMiddleware:
-    """Blocks access with a one-time setup screen until GEMINI_API_KEY is configured."""
 
     def __init__(self, get_response):
         self.get_response = get_response
