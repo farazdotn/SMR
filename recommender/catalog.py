@@ -179,16 +179,21 @@ def search_candidates(query: str, limit: int = 5) -> list[CatalogTrack]:
     return _search(query, limit)
 
 
+def _raw_similarity(want: str, got: str) -> float:
+    w, g = _normalize(want), _normalize(got)
+    return 1.0 if w == g else SequenceMatcher(None, w, g).ratio()
+
+
 def verify_recommendation(title: str, artist: str) -> CatalogTrack | None:
     best = None
-    best_score = 0.0
+    best_rank = (0.0, 0.0)
     for track in _search(f"{title} {artist}", limit=10):
         if not _matches(title, artist, track):
             continue
-        score = _title_score(title, track.title)
-        if score > best_score:
+        rank = (_title_score(title, track.title), _raw_similarity(title, track.title))
+        if rank > best_rank:
             best = track
-            best_score = score
+            best_rank = rank
     return best
 
 

@@ -26,11 +26,12 @@ class GeminiResponse(BaseModel):
 
 
 class GeminiServiceError(Exception):
-    """Raised when the iTunes Search API can't be reached or misbehaves."""
+    """Raised when the Gemini API can't be reached or misbehaves."""
 
 
 class GeminiRateLimitError(GeminiServiceError):
-    """Raised when the iTunes Search API can't be reached or misbehaves."""
+    """Raised when every Gemini model we tried returned a 429 (rate limit)."""
+
 
 class GeminiOverloadError(GeminiServiceError):
     """Raised when Google's Gemini servers return 503/504 high-demand errors."""
